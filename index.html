@@ -3,53 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>小巴中醫 - 科學中藥劑量換算平台(雲端連線版)</title>
+    <title>小巴中醫 - 科學中藥劑量換算平台</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
         .header { text-align: center; margin-bottom: 20px; color: #2c3e50; }
-        .container { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; }
+        .container { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; align-items: flex-start;}
         .column { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); flex: 1; }
         .left-col { flex: 1.2; }
-        .right-col { flex: 0.8; background-color: #fafbfc; }
+        .right-col { flex: 0.8; background-color: #fafbfc; position: sticky; top: 20px;}
         input, select, button { padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
-        .search-bar { display: flex; gap: 10px; margin-bottom: 15px; }
-        .search-bar input { flex: 1; }
+        .search-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;}
+        .search-bar input { flex: 1; min-width: 200px;}
+        .search-bar select { flex: 0.5; min-width: 120px;}
         .drug-list, .prescription-list, .result-list { list-style: none; padding: 0; margin: 0; }
         .drug-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
         .drug-item:hover { background-color: #f9f9f9; }
-        .add-btn { background-color: #4CAF50; color: white; border: none; cursor: pointer; padding: 5px 15px; }
+        .add-btn { background-color: #4CAF50; color: white; border: none; cursor: pointer; padding: 5px 15px; border-radius:4px;}
         .add-btn:hover { background-color: #45a049; }
-        .remove-btn { background-color: #f44336; color: white; border: none; cursor: pointer; padding: 5px 10px; }
+        .remove-btn { background-color: #f44336; color: white; border: none; cursor: pointer; padding: 5px 10px; border-radius:4px;}
         .presc-item { background: #e8f4f8; padding: 10px; margin-bottom: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
-        .presc-item input { width: 60px; text-align: center; }
+        .presc-item input { width: 70px; text-align: center; }
         .result-item { padding: 8px 0; border-bottom: 1px dashed #ccc; display: flex; justify-content: space-between; font-weight: bold;}
         .total-weight { font-size: 18px; color: #d32f2f; margin-top: 15px; text-align: right; }
         #statusMessage { background: #fff3cd; color: #856404; padding: 10px; text-align: center; border-radius: 4px; margin-bottom: 15px; font-weight: bold; }
+        
+        /* 針對有問題的藥品標示紅字 */
+        .warning-text { color: #d32f2f !important; font-weight: bold; }
+        .warning-bg { background-color: #ffebee !important; }
     </style>
 </head>
 <body>
 
     <div class="header">
         <h1>科學中藥原藥材換算平台</h1>
-        <p>連線 Google 雲端資料庫，即時解析處方生藥劑量</p>
+        <p>連線 Google 雲端資料庫，即時解析處方生藥與賦形劑劑量</p>
     </div>
 
-    <div id="statusMessage">正在從 Google 雲端載入中藥資料庫，請稍候...</div>
+    <div id="statusMessage">正在從 Google 雲端載入最新中藥資料庫，請稍候...</div>
 
     <div class="container">
         <div class="column left-col">
-            <h3>🔍 搜尋與加入處方</h3>
+            <h3>🔍 搜尋與開立處方</h3>
             <div class="search-bar">
+                <select id="brandSelect" onchange="filterDrugs()">
+                    <option value="all">所有藥廠</option>
+                </select>
+                
                 <select id="categorySelect" onchange="filterDrugs()">
-                    <option value="all">所有分類</option>
+                    <option value="all">所有劑型</option>
                     <option value="湯劑/複方">湯劑/複方</option>
                     <option value="散劑/顆粒">散劑/顆粒</option>
-                    <option value="單方/其餘">單方/其餘</option>
+                    <option value="錠劑/丸劑">錠劑/丸劑</option>
+                    <option value="單方">單方</option>
                 </select>
-                <input type="text" id="searchInput" placeholder="請輸入關鍵字搜尋藥品 (例: 葛根湯)" onkeyup="filterDrugs()">
+            </div>
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="輸入藥名、注音簡稱或許可證字號搜尋..." onkeyup="filterDrugs()">
             </div>
             
-            <div style="max-height: 300px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; margin-bottom: 20px;">
+            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; margin-bottom: 20px;">
                 <ul class="drug-list" id="drugList">
                     </ul>
             </div>
@@ -61,127 +74,178 @@
 
         <div class="column right-col">
             <h3>📊 原藥材換算結果</h3>
-            <p style="font-size: 14px; color: #666;">運算公式：一日克數 × (單味藥重量 ÷ 總組成生藥重) × 濃縮倍數</p>
+            <p style="font-size: 14px; color: #666;">系統自動分離賦形劑，精準換算實際生藥攝取量</p>
             <ul class="result-list" id="resultList">
                 </ul>
-            <div class="total-weight" id="totalWeightDisplay">
-                總原藥材重量: 0.00 g
+            <div class="total-weight" id="totalWeightDisplay" style="border-top: 2px solid #333; padding-top:10px;">
+                總生藥重量: 0.00 g
+            </div>
+            <div class="total-weight" id="totalExcipientDisplay" style="color: #795548; font-size: 16px;">
+                總賦形劑量: 0.00 g
             </div>
         </div>
     </div>
 
     <script>
         // ==========================================
-        // ⚠️ 請在下方雙引號內，貼上您剛剛在 Google 試算表複製的 CSV 網址
+        // ⚠️ 請在下方雙引號內，維持貼上您的 Google 試算表 CSV 網址
         // ==========================================
         const googleSheetCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5wPHCM9ybm9133NpX9HgFee9chFqvpvr9J2yQG8NVpzVBVeZvkOkkXI6vgva32xs8C_c2SbI5lObD/pub?output=csv";
 
-        let database = []; // 用來存放從雲端抓下來的資料
-        let prescription = []; // 醫生的處方清單
+        let database = []; 
+        let prescription = []; 
 
-        // 從 Google Sheet 載入並解析 CSV 資料
-        async function loadCloudDatabase() {
+        // 啟動雲端連線與專業 CSV 解析
+        function loadCloudDatabase() {
             const statusMessage = document.getElementById('statusMessage');
-            try {
-                const response = await fetch(googleSheetCsvUrl);
-                if (!response.ok) throw new Error("無法讀取網址");
-                const csvText = await response.text();
-                
-                const lines = csvText.split('\n');
-                database = [];
-                
-                // 從第二行開始讀取資料 (跳過標題列)
-                for (let i = 1; i < lines.length; i++) {
-                    if (!lines[i].trim()) continue;
+            
+            Papa.parse(googleSheetCsvUrl, {
+                download: true,
+                header: true, // 自動將第一列視為標題
+                skipEmptyLines: true,
+                complete: function(results) {
+                    const data = results.data;
+                    let brandsSet = new Set(); // 用來收集不重複的藥廠名稱
+
+                    database = [];
                     
-                    // 切割 CSV 欄位
-                    const cols = lines[i].split(',');
-                    if (cols.length < 4) continue;
-                    
-                    const licenseNo = cols[0].replace(/"/g, '').trim(); // 許可證字號
-                    const drugName = cols[1].replace(/"/g, '').trim();  // 藥品名稱
-                    const ratio = parseFloat(cols[2]) || 1;             // 濃縮倍數
-                    const ingredientsStr = cols[3].replace(/"/g, '').trim(); // 精簡藥材組成
-                    
-                    // 解析藥材字串 "苦參:5.3|荊芥:1.1" 轉成物件
-                    let ingredientsObj = {};
-                    let totalRawWeight = 0;
-                    
-                    if (ingredientsStr) {
-                        const pairs = ingredientsStr.split('|');
-                        pairs.forEach(pair => {
-                            const kv = pair.split(':');
-                            if (kv.length === 2) {
-                                const herbName = kv[0].trim();
-                                const herbWeight = parseFloat(kv[1]) || 0;
-                                ingredientsObj[herbName] = herbWeight;
-                                totalRawWeight += herbWeight;
-                            }
+                    data.forEach((row, index) => {
+                        if (!row['顯示名稱']) return;
+                        
+                        const licenseNo = row['許可證字號'] || '';
+                        const brand = row['藥廠'] || '未知藥廠';
+                        const drugName = row['顯示名稱'] || '';
+                        const category = row['分類標籤'] || '';
+                        const ratio = parseFloat(row['濃縮倍數']) || 0;
+                        const status = row['解析狀態'] || '';
+                        const hint = row['人工校正提示'] || '';
+                        
+                        // 收集藥廠清單
+                        if(brand !== '其他藥廠' && brand !== '未知藥廠') {
+                            brandsSet.add(brand);
+                        }
+                        
+                        // 解析純生藥
+                        let ingredientsObj = {};
+                        let totalRawWeight = 0;
+                        const ingredientsStr = row['純生藥組成'] || '';
+                        if (ingredientsStr) {
+                            ingredientsStr.split('|').forEach(pair => {
+                                const kv = pair.split(':');
+                                if (kv.length === 2) {
+                                    const w = parseFloat(kv[1]) || 0;
+                                    ingredientsObj[kv[0].trim()] = w;
+                                    totalRawWeight += w;
+                                }
+                            });
+                        }
+
+                        // 解析賦形劑
+                        let excipientsObj = {};
+                        let totalExcipientWeight = 0;
+                        const excipientsStr = row['賦形劑組成'] || '';
+                        if (excipientsStr) {
+                            excipientsStr.split('|').forEach(pair => {
+                                const kv = pair.split(':');
+                                if (kv.length === 2) {
+                                    const w = parseFloat(kv[1]) || 0;
+                                    excipientsObj[kv[0].trim()] = w;
+                                    totalExcipientWeight += w;
+                                }
+                            });
+                        }
+                        
+                        database.push({
+                            id: index,
+                            license: licenseNo,
+                            brand: brand,
+                            name: drugName,
+                            category: category,
+                            ratio: ratio,
+                            status: status,
+                            hint: hint,
+                            isWarning: status.includes('⚠️'), // 判斷是否需要標紅
+                            totalRaw: totalRawWeight || 1, 
+                            totalExcipient: totalExcipientWeight,
+                            ingredients: ingredientsObj,
+                            excipients: excipientsObj,
+                            bopomofo: row['注音簡稱'] || '' // 預留給未來表單自訂注音的欄位
                         });
-                    }
-                    
-                    // 根據藥名自動分類
-                    let category = "單方/其餘";
-                    if (drugName.includes("湯")) category = "湯劑/複方";
-                    else if (drugName.includes("散") || drugName.includes("顆粒")) category = "散劑/顆粒";
-                    
-                    database.push({
-                        id: i,
-                        license: licenseNo,
-                        name: drugName,
-                        category: category,
-                        ratio: ratio,
-                        totalRaw: totalRawWeight || 1, // 避免除以 0
-                        ingredients: ingredientsObj
                     });
+
+                    // 建立動態藥廠下拉選單
+                    populateBrandSelect(brandsSet);
+                    
+                    statusMessage.style.backgroundColor = "#d4edda";
+                    statusMessage.style.color = "#155724";
+                    statusMessage.innerHTML = `✅ 成功連線雲端資料庫！共載入 <strong>${database.length}</strong> 筆精準中藥資料。`;
+                    
+                    renderDrugs(database);
+                },
+                error: function(error) {
+                    console.error(error);
+                    statusMessage.style.backgroundColor = "#f8d7da";
+                    statusMessage.style.color = "#721c24";
+                    statusMessage.innerHTML = "❌ 雲端資料庫載入失敗。請檢查網址是否正確。";
                 }
-                
-                statusMessage.style.backgroundColor = "#d4edda";
-                statusMessage.style.color = "#155724";
-                statusMessage.style.innerText = `✅ 成功連線雲端資料庫！共載入 ${database.length} 筆藥品資料。`;
-                statusMessage.innerHTML = `✅ 成功連線雲端資料庫！共載入 <strong>${database.length}</strong> 筆中藥資料。`;
-                
-                // 首次渲染所有藥物
-                renderDrugs(database);
-                
-            } catch (error) {
-                console.error(error);
-                statusMessage.style.backgroundColor = "#f8d7da";
-                statusMessage.style.color = "#721c24";
-                statusMessage.innerHTML = "❌ 雲端資料庫載入失敗。請檢查程式碼中的網址是否正確，且試算表已「發布到網路」。";
-            }
+            });
         }
 
-        // 渲染搜尋結果列表
+        // 產生藥廠選單
+        function populateBrandSelect(brandsSet) {
+            const select = document.getElementById('brandSelect');
+            const sortedBrands = Array.from(brandsSet).sort();
+            sortedBrands.forEach(brand => {
+                select.innerHTML += `<option value="${brand}">${brand}</option>`;
+            });
+        }
+
+        // 渲染左側搜尋結果 (加入紅字警示邏輯)
         function renderDrugs(drugs) {
             const list = document.getElementById('drugList');
             list.innerHTML = '';
             
-            // 畫面最多只顯示前 50 筆避免卡頓
-            const displayDrugs = drugs.slice(0, 50);
+            const displayDrugs = drugs.slice(0, 100); // 顯示前100筆
             
             displayDrugs.forEach(drug => {
+                // 如果是警告狀態，加上紅字 class
+                const nameClass = drug.isWarning ? 'warning-text' : '';
+                const warningTag = drug.isWarning ? `<br><small style="color:#d32f2f;">⚠️ 需人工校正: ${drug.hint}</small>` : '';
+                
                 list.innerHTML += `
-                    <li class="drug-item">
-                        <span><span style="color:#888; font-size:12px;">[${drug.category}]</span> <strong>${drug.name}</strong> <small style="color:#aaa;">(${drug.license})</small></span>
+                    <li class="drug-item ${drug.isWarning ? 'warning-bg' : ''}">
+                        <div style="flex:1;">
+                            <span style="color:#888; font-size:12px;">[${drug.brand}] [${drug.category}]</span><br>
+                            <span class="${nameClass}" style="font-size:16px;"><strong>${drug.name}</strong></span>
+                            ${warningTag}
+                        </div>
                         <button class="add-btn" onclick="addToPrescription(${drug.id})">加入</button>
                     </li>
                 `;
             });
-            if (drugs.length > 50) {
-                list.innerHTML += `<li class="drug-item" style="color:#888; justify-content:center; font-size:13px;">...還有 ${drugs.length - 50} 筆藥品，請輸入關鍵字縮小範圍...</li>`;
+            if (drugs.length > 100) {
+                list.innerHTML += `<li class="drug-item" style="color:#888; justify-content:center;">...還有 ${drugs.length - 100} 筆，請縮小搜尋範圍...</li>`;
             }
         }
 
-        // 搜尋篩選功能
+        // 強化的多條件過濾搜尋
         function filterDrugs() {
             const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
             const category = document.getElementById('categorySelect').value;
+            const brand = document.getElementById('brandSelect').value;
             
             const filtered = database.filter(drug => {
                 const matchCategory = category === 'all' || drug.category === category;
-                const matchKeyword = drug.name.toLowerCase().includes(keyword) || drug.license.toLowerCase().includes(keyword);
-                return matchCategory && matchKeyword;
+                const matchBrand = brand === 'all' || drug.brand === brand;
+                
+                // 支援搜藥名、藥廠、許可證、或預留的注音欄位
+                const matchKeyword = 
+                    drug.name.toLowerCase().includes(keyword) || 
+                    drug.license.toLowerCase().includes(keyword) ||
+                    drug.brand.toLowerCase().includes(keyword) ||
+                    drug.bopomofo.toLowerCase().includes(keyword);
+                    
+                return matchCategory && matchBrand && matchKeyword;
             });
             renderDrugs(filtered);
         }
@@ -195,14 +259,12 @@
             }
         }
 
-        // 移除處方
         function removePrescription(id) {
             prescription = prescription.filter(p => p.id !== id);
             renderPrescription();
             calculateResult();
         }
 
-        // 當醫生修改克數時觸發
         function updateDose(id, value) {
             const p = prescription.find(p => p.id === id);
             if (p) {
@@ -211,14 +273,18 @@
             }
         }
 
-        // 渲染已加入的處方清單
+        // 渲染已勾選的處方
         function renderPrescription() {
             const list = document.getElementById('prescriptionList');
             list.innerHTML = '';
             prescription.forEach(p => {
+                const nameClass = p.isWarning ? 'warning-text' : '';
                 list.innerHTML += `
-                    <div class="presc-item">
-                        <span><strong>${p.name}</strong> <small style="color:#666;">(倍數:${p.ratio})</small></span>
+                    <div class="presc-item ${p.isWarning ? 'warning-bg' : ''}">
+                        <div>
+                            <span class="${nameClass}"><strong>${p.name}</strong></span><br>
+                            <small style="color:#666;">(倍數:${p.ratio || '未知'})</small>
+                        </div>
                         <div>
                             <input type="number" min="0" step="0.1" placeholder="克/日" onchange="updateDose(${p.id}, this.value)" onkeyup="updateDose(${p.id}, this.value)"> g
                             <button class="remove-btn" onclick="removePrescription(${p.id})">X</button>
@@ -228,25 +294,37 @@
             });
         }
 
-        // 核心運算：拆解複方、合併同名藥材、乘上倍數與比例
+        // 核心運算：拆解生藥與賦形劑
         function calculateResult() {
             let rawHerbs = {};
-            let grandTotal = 0;
+            let totalExcipients = 0;
+            let grandTotalRaw = 0;
 
             prescription.forEach(p => {
-                if (p.dose > 0) {
+                if (p.dose > 0 && !p.isWarning && p.ratio > 0) {
+                    
+                    // 1. 計算生藥
+                    let rawRatioSum = p.totalRaw;
                     for (let herb in p.ingredients) {
-                        // 核心換算公式：醫生開立克數 × (單味藥在複方中的組成比例) × 濃縮浸膏比
-                        let herbWeight = p.dose * (p.ingredients[herb] / p.totalRaw) * p.ratio;
-                        
+                        let herbWeight = p.dose * (p.ingredients[herb] / rawRatioSum) * p.ratio;
                         if (!rawHerbs[herb]) rawHerbs[herb] = 0;
                         rawHerbs[herb] += herbWeight;
-                        grandTotal += herbWeight;
+                        grandTotalRaw += herbWeight;
+                    }
+                    
+                    // 2. 計算吃下肚的賦形劑量 (處方克數 × 賦形劑佔總重量比例)
+                    // 總重量 = 浸膏重(生藥/倍數) + 賦形劑重
+                    let extractWeight = p.totalRaw / p.ratio;
+                    let formulaTotalWeight = extractWeight + p.totalExcipient;
+                    
+                    if(formulaTotalWeight > 0) {
+                        let excipientDose = p.dose * (p.totalExcipient / formulaTotalWeight);
+                        totalExcipients += excipientDose;
                     }
                 }
             });
 
-            // 渲染右側結果，並依生藥克數由大到小排序
+            // 渲染結果
             const list = document.getElementById('resultList');
             list.innerHTML = '';
             
@@ -263,10 +341,10 @@
                 }
             });
 
-            document.getElementById('totalWeightDisplay').innerText = `總原藥材重量: ${grandTotal.toFixed(2)} g`;
+            document.getElementById('totalWeightDisplay').innerText = `總原藥材重量: ${grandTotalRaw.toFixed(2)} g`;
+            document.getElementById('totalExcipientDisplay').innerText = `其中包含賦形劑: ${totalExcipients.toFixed(2)} g`;
         }
 
-        // 網頁開啟時，自動啟動連線
         loadCloudDatabase();
     </script>
 </body>
