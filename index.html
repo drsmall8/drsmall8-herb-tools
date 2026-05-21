@@ -46,7 +46,28 @@
         .add-btn:hover { background-color: #45a049; }
         .remove-btn { background-color: #f44336; color: white; border: none; cursor: pointer; padding: 5px 10px; border-radius:4px;}
         .presc-item { background: #e8f4f8; padding: 10px; margin-bottom: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
-        .presc-item input { width: 70px; text-align: center; }
+        
+        /* =========================================
+           優化數字輸入框：隱藏箭頭與調整樣式
+           ========================================= */
+        .presc-item input { 
+            width: 70px; 
+            text-align: center; 
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        /* 隱藏 Chrome, Safari, Edge, Opera 的箭頭 */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        /* 隱藏 Firefox 的箭頭 */
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
         .result-item { padding: 8px 0; border-bottom: 1px dashed #ccc; display: flex; justify-content: space-between; font-weight: bold;}
         .total-weight { font-size: 18px; color: #d32f2f; margin-top: 15px; text-align: right; }
         #statusMessage { background: #fff3cd; color: #856404; padding: 10px; text-align: center; border-radius: 4px; margin-bottom: 15px; font-weight: bold; }
@@ -77,7 +98,7 @@
                     </div>
                 </div>
                 <div class="brand-filters" id="brandCheckboxes">
-                    </div>
+                </div>
             </div>
 
             <div class="search-bar">
@@ -93,19 +114,19 @@
             
             <div style="max-height: 450px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; margin-bottom: 20px;">
                 <ul class="drug-list" id="drugList">
-                    </ul>
+                </ul>
             </div>
 
-            <h3>📝 目前處方 (請輸入一日克數)</h3>
+            <h3>📝 目前處方 (請點擊輸入一日克數)</h3>
             <div id="prescriptionList">
-                </div>
+            </div>
         </div>
 
         <div class="column right-col">
             <h3>📊 原藥材換算結果</h3>
             <p style="font-size: 14px; color: #666;">系統自動分離賦形劑，精準換算實際生藥攝取量</p>
             <ul class="result-list" id="resultList">
-                </ul>
+            </ul>
             <div class="total-weight" id="totalWeightDisplay" style="border-top: 2px solid #333; padding-top:10px;">
                 總生藥重量: 0.00 g
             </div>
@@ -133,7 +154,7 @@
                 skipEmptyLines: true,
                 complete: function(results) {
                     const data = results.data;
-                    let brandCounts = {}; // 用來統計各藥廠筆數
+                    let brandCounts = {}; 
 
                     database = [];
                     
@@ -148,14 +169,13 @@
                         const status = row['解析狀態'] || '';
                         const hint = row['人工校正提示'] || '';
                         
-                        // 統計筆數
                         if(brand !== '其他藥廠' && brand !== '未知藥廠') {
                             brandCounts[brand] = (brandCounts[brand] || 0) + 1;
                         }
                         
                         let ingredientsObj = {};
                         let totalRawWeight = 0;
-                        let rawStr = ''; // 用於除錯卡片顯示
+                        let rawStr = ''; 
                         const ingredientsStr = row['純生藥組成'] || '';
                         if (ingredientsStr) {
                             rawStr = ingredientsStr.replace(/\|/g, ', ');
@@ -171,7 +191,7 @@
 
                         let excipientsObj = {};
                         let totalExcipientWeight = 0;
-                        let excStr = ''; // 用於除錯卡片顯示
+                        let excStr = ''; 
                         const excipientsStr = row['賦形劑組成'] || '';
                         if (excipientsStr) {
                             excStr = excipientsStr.replace(/\|/g, ', ');
@@ -222,12 +242,10 @@
             });
         }
 
-        // 產生藥廠多選框與筆數 (依筆數多寡排序)
         function populateBrandCheckboxes(brandCounts) {
             const container = document.getElementById('brandCheckboxes');
             container.innerHTML = '';
             
-            // 依據資料筆數由多到少排序藥廠
             const sortedBrands = Object.keys(brandCounts).sort((a, b) => brandCounts[b] - brandCounts[a]);
             
             sortedBrands.forEach(brand => {
@@ -240,14 +258,12 @@
             });
         }
 
-        // 全選 / 全不選按鈕功能
         function selectAllBrands(isSelectAll) {
             const checkboxes = document.querySelectorAll('.brand-cb');
             checkboxes.forEach(cb => cb.checked = isSelectAll);
             filterDrugs();
         }
 
-        // 渲染左側搜尋結果與懸停除錯資訊卡
         function renderDrugs(drugs) {
             const list = document.getElementById('drugList');
             list.innerHTML = '';
@@ -258,7 +274,6 @@
                 const nameClass = drug.isWarning ? 'warning-text' : '';
                 const warningTag = drug.isWarning ? `<br><small style="color:#d32f2f;">⚠️ 需校正: ${drug.hint}</small>` : '';
                 
-                // 懸停顯示的除錯資訊卡內容
                 const hoverCardContent = `
                     <div class="hover-card">
                         <div class="hover-card-title">🔍 資料庫解析詳情</div>
@@ -291,7 +306,6 @@
             const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
             const category = document.getElementById('categorySelect').value;
             
-            // 抓取目前有被打勾的藥廠
             const checkedBrands = Array.from(document.querySelectorAll('.brand-cb:checked')).map(cb => cb.value);
             
             const filtered = database.filter(drug => {
@@ -310,7 +324,7 @@
         function addToPrescription(id) {
             const drug = database.find(d => d.id === id);
             if (drug && !prescription.find(p => p.id === id)) {
-                prescription.push({ ...drug, dose: 0 });
+                prescription.push({ ...drug, dose: 0 }); // 預設克數給 0，讓醫師自己打
                 renderPrescription();
             }
         }
@@ -327,6 +341,7 @@
                 p.dose = parseFloat(value) || 0;
                 calculateResult();
             }
+            // 這裡不再呼叫 renderPrescription()，避免輸入框失去焦點！
         }
 
         function renderPrescription() {
@@ -334,6 +349,9 @@
             list.innerHTML = '';
             prescription.forEach(p => {
                 const nameClass = p.isWarning ? 'warning-text' : '';
+                
+                // 核心修復：加入 value="${p.dose || ''}" 記住輸入的數值
+                // 加入 onwheel="this.blur()" 防止滑鼠滾動改到數字
                 list.innerHTML += `
                     <div class="presc-item ${p.isWarning ? 'warning-bg' : ''}">
                         <div>
@@ -341,7 +359,11 @@
                             <small style="color:#666;">(倍數:${p.ratio > 0 ? p.ratio : '⚠️ 缺資料'})</small>
                         </div>
                         <div>
-                            <input type="number" min="0" step="0.1" placeholder="克/日" onchange="updateDose(${p.id}, this.value)" onkeyup="updateDose(${p.id}, this.value)"> g
+                            <input type="number" min="0" step="0.1" placeholder="克/日" 
+                                   value="${p.dose > 0 ? p.dose : ''}" 
+                                   onchange="updateDose(${p.id}, this.value)" 
+                                   onkeyup="updateDose(${p.id}, this.value)"
+                                   onwheel="this.blur()"> g
                             <button class="remove-btn" onclick="removePrescription(${p.id})">X</button>
                         </div>
                     </div>
