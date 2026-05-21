@@ -13,12 +13,35 @@
         .left-col { flex: 1.2; }
         .right-col { flex: 0.8; background-color: #fafbfc; position: sticky; top: 20px;}
         input, select, button { padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
-        .search-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;}
+        .search-bar { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;}
         .search-bar input { flex: 1; min-width: 200px;}
         .search-bar select { flex: 0.5; min-width: 120px;}
+        
+        /* 藥廠多選區塊樣式 */
+        .brand-filters-container { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 10px; margin-bottom: 15px; }
+        .brand-filters-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 14px; font-weight: bold; }
+        .brand-filters { display: flex; flex-wrap: wrap; gap: 10px; max-height: 120px; overflow-y: auto; font-size: 14px;}
+        .brand-filters label { display: flex; align-items: center; cursor: pointer; background: #fff; padding: 4px 8px; border-radius: 20px; border: 1px solid #ddd; }
+        .brand-filters label:hover { background: #eef2f5; }
+        .brand-count { color: #888; font-size: 12px; margin-left: 4px; }
+        .btn-small { padding: 2px 8px; font-size: 12px; cursor: pointer; background: #6c757d; color: white; border: none; border-radius: 3px;}
+        .btn-small:hover { background: #5a6268; }
+
         .drug-list, .prescription-list, .result-list { list-style: none; padding: 0; margin: 0; }
-        .drug-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+        .drug-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; position: relative; }
         .drug-item:hover { background-color: #f9f9f9; }
+        
+        /* 滑鼠懸停資訊卡 (Tooltip) 樣式 */
+        .drug-info-wrapper { flex: 1; cursor: help; }
+        .hover-card {
+            display: none; position: absolute; left: 0; top: 100%; width: 95%; z-index: 10;
+            background: #fff; border: 1px solid #2c3e50; border-radius: 6px; padding: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2); font-size: 13px; line-height: 1.6; color: #333;
+        }
+        .drug-info-wrapper:hover .hover-card { display: block; }
+        .hover-card-title { font-weight: bold; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 4px; margin-bottom: 6px; }
+        .hover-card p { margin: 2px 0; }
+
         .add-btn { background-color: #4CAF50; color: white; border: none; cursor: pointer; padding: 5px 15px; border-radius:4px;}
         .add-btn:hover { background-color: #45a049; }
         .remove-btn { background-color: #f44336; color: white; border: none; cursor: pointer; padding: 5px 10px; border-radius:4px;}
@@ -28,7 +51,6 @@
         .total-weight { font-size: 18px; color: #d32f2f; margin-top: 15px; text-align: right; }
         #statusMessage { background: #fff3cd; color: #856404; padding: 10px; text-align: center; border-radius: 4px; margin-bottom: 15px; font-weight: bold; }
         
-        /* 針對有問題的藥品標示紅字 */
         .warning-text { color: #d32f2f !important; font-weight: bold; }
         .warning-bg { background-color: #ffebee !important; }
     </style>
@@ -45,11 +67,20 @@
     <div class="container">
         <div class="column left-col">
             <h3>🔍 搜尋與開立處方</h3>
+            
+            <div class="brand-filters-container">
+                <div class="brand-filters-header">
+                    <span>🏢 廠牌篩選 (勾選您要顯示的藥廠)</span>
+                    <div>
+                        <button class="btn-small" onclick="selectAllBrands(true)">全選</button>
+                        <button class="btn-small" onclick="selectAllBrands(false)">全不選</button>
+                    </div>
+                </div>
+                <div class="brand-filters" id="brandCheckboxes">
+                    </div>
+            </div>
+
             <div class="search-bar">
-                <select id="brandSelect" onchange="filterDrugs()">
-                    <option value="all">所有藥廠</option>
-                </select>
-                
                 <select id="categorySelect" onchange="filterDrugs()">
                     <option value="all">所有劑型</option>
                     <option value="湯劑/複方">湯劑/複方</option>
@@ -57,12 +88,10 @@
                     <option value="錠劑/丸劑">錠劑/丸劑</option>
                     <option value="單方">單方</option>
                 </select>
-            </div>
-            <div class="search-bar">
                 <input type="text" id="searchInput" placeholder="輸入藥名、注音簡稱或許可證字號搜尋..." onkeyup="filterDrugs()">
             </div>
             
-            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; margin-bottom: 20px;">
+            <div style="max-height: 450px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; margin-bottom: 20px;">
                 <ul class="drug-list" id="drugList">
                     </ul>
             </div>
@@ -95,17 +124,16 @@
         let database = []; 
         let prescription = []; 
 
-        // 啟動雲端連線與專業 CSV 解析
         function loadCloudDatabase() {
             const statusMessage = document.getElementById('statusMessage');
             
             Papa.parse(googleSheetCsvUrl, {
                 download: true,
-                header: true, // 自動將第一列視為標題
+                header: true,
                 skipEmptyLines: true,
                 complete: function(results) {
                     const data = results.data;
-                    let brandsSet = new Set(); // 用來收集不重複的藥廠名稱
+                    let brandCounts = {}; // 用來統計各藥廠筆數
 
                     database = [];
                     
@@ -120,16 +148,17 @@
                         const status = row['解析狀態'] || '';
                         const hint = row['人工校正提示'] || '';
                         
-                        // 收集藥廠清單
+                        // 統計筆數
                         if(brand !== '其他藥廠' && brand !== '未知藥廠') {
-                            brandsSet.add(brand);
+                            brandCounts[brand] = (brandCounts[brand] || 0) + 1;
                         }
                         
-                        // 解析純生藥
                         let ingredientsObj = {};
                         let totalRawWeight = 0;
+                        let rawStr = ''; // 用於除錯卡片顯示
                         const ingredientsStr = row['純生藥組成'] || '';
                         if (ingredientsStr) {
+                            rawStr = ingredientsStr.replace(/\|/g, ', ');
                             ingredientsStr.split('|').forEach(pair => {
                                 const kv = pair.split(':');
                                 if (kv.length === 2) {
@@ -140,11 +169,12 @@
                             });
                         }
 
-                        // 解析賦形劑
                         let excipientsObj = {};
                         let totalExcipientWeight = 0;
+                        let excStr = ''; // 用於除錯卡片顯示
                         const excipientsStr = row['賦形劑組成'] || '';
                         if (excipientsStr) {
+                            excStr = excipientsStr.replace(/\|/g, ', ');
                             excipientsStr.split('|').forEach(pair => {
                                 const kv = pair.split(':');
                                 if (kv.length === 2) {
@@ -164,17 +194,18 @@
                             ratio: ratio,
                             status: status,
                             hint: hint,
-                            isWarning: status.includes('⚠️'), // 判斷是否需要標紅
+                            isWarning: status.includes('⚠️'),
                             totalRaw: totalRawWeight || 1, 
                             totalExcipient: totalExcipientWeight,
                             ingredients: ingredientsObj,
                             excipients: excipientsObj,
-                            bopomofo: row['注音簡稱'] || '' // 預留給未來表單自訂注音的欄位
+                            rawDisplayStr: rawStr || '無',
+                            excDisplayStr: excStr || '無',
+                            bopomofo: row['注音簡稱'] || '' 
                         });
                     });
 
-                    // 建立動態藥廠下拉選單
-                    populateBrandSelect(brandsSet);
+                    populateBrandCheckboxes(brandCounts);
                     
                     statusMessage.style.backgroundColor = "#d4edda";
                     statusMessage.style.color = "#155724";
@@ -191,33 +222,61 @@
             });
         }
 
-        // 產生藥廠選單
-        function populateBrandSelect(brandsSet) {
-            const select = document.getElementById('brandSelect');
-            const sortedBrands = Array.from(brandsSet).sort();
+        // 產生藥廠多選框與筆數 (依筆數多寡排序)
+        function populateBrandCheckboxes(brandCounts) {
+            const container = document.getElementById('brandCheckboxes');
+            container.innerHTML = '';
+            
+            // 依據資料筆數由多到少排序藥廠
+            const sortedBrands = Object.keys(brandCounts).sort((a, b) => brandCounts[b] - brandCounts[a]);
+            
             sortedBrands.forEach(brand => {
-                select.innerHTML += `<option value="${brand}">${brand}</option>`;
+                container.innerHTML += `
+                    <label>
+                        <input type="checkbox" value="${brand}" class="brand-cb" onchange="filterDrugs()" checked>
+                        ${brand} <span class="brand-count">(${brandCounts[brand]})</span>
+                    </label>
+                `;
             });
         }
 
-        // 渲染左側搜尋結果 (加入紅字警示邏輯)
+        // 全選 / 全不選按鈕功能
+        function selectAllBrands(isSelectAll) {
+            const checkboxes = document.querySelectorAll('.brand-cb');
+            checkboxes.forEach(cb => cb.checked = isSelectAll);
+            filterDrugs();
+        }
+
+        // 渲染左側搜尋結果與懸停除錯資訊卡
         function renderDrugs(drugs) {
             const list = document.getElementById('drugList');
             list.innerHTML = '';
             
-            const displayDrugs = drugs.slice(0, 100); // 顯示前100筆
+            const displayDrugs = drugs.slice(0, 100); 
             
             displayDrugs.forEach(drug => {
-                // 如果是警告狀態，加上紅字 class
                 const nameClass = drug.isWarning ? 'warning-text' : '';
-                const warningTag = drug.isWarning ? `<br><small style="color:#d32f2f;">⚠️ 需人工校正: ${drug.hint}</small>` : '';
+                const warningTag = drug.isWarning ? `<br><small style="color:#d32f2f;">⚠️ 需校正: ${drug.hint}</small>` : '';
+                
+                // 懸停顯示的除錯資訊卡內容
+                const hoverCardContent = `
+                    <div class="hover-card">
+                        <div class="hover-card-title">🔍 資料庫解析詳情</div>
+                        <p><strong>許可證字號：</strong>${drug.license}</p>
+                        <p><strong>濃縮倍數：</strong><span style="color:#e67e22;">${drug.ratio > 0 ? drug.ratio : '未解析或缺失'}</span></p>
+                        <p><strong>生藥組成：</strong><span style="color:#27ae60;">${drug.rawDisplayStr}</span></p>
+                        <p><strong>賦形劑：</strong><span style="color:#7f8c8d;">${drug.excDisplayStr}</span></p>
+                        ${drug.isWarning ? `<p style="color:#c0392b; margin-top:5px;"><strong>⚠️ 校正建議：</strong>${drug.hint}</p>` : ''}
+                    </div>
+                `;
                 
                 list.innerHTML += `
                     <li class="drug-item ${drug.isWarning ? 'warning-bg' : ''}">
-                        <div style="flex:1;">
+                        <div class="drug-info-wrapper">
                             <span style="color:#888; font-size:12px;">[${drug.brand}] [${drug.category}]</span><br>
                             <span class="${nameClass}" style="font-size:16px;"><strong>${drug.name}</strong></span>
                             ${warningTag}
+                            ${hoverCardContent}
                         </div>
                         <button class="add-btn" onclick="addToPrescription(${drug.id})">加入</button>
                     </li>
@@ -228,21 +287,19 @@
             }
         }
 
-        // 強化的多條件過濾搜尋
         function filterDrugs() {
             const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
             const category = document.getElementById('categorySelect').value;
-            const brand = document.getElementById('brandSelect').value;
+            
+            // 抓取目前有被打勾的藥廠
+            const checkedBrands = Array.from(document.querySelectorAll('.brand-cb:checked')).map(cb => cb.value);
             
             const filtered = database.filter(drug => {
                 const matchCategory = category === 'all' || drug.category === category;
-                const matchBrand = brand === 'all' || drug.brand === brand;
-                
-                // 支援搜藥名、藥廠、許可證、或預留的注音欄位
+                const matchBrand = checkedBrands.includes(drug.brand);
                 const matchKeyword = 
                     drug.name.toLowerCase().includes(keyword) || 
                     drug.license.toLowerCase().includes(keyword) ||
-                    drug.brand.toLowerCase().includes(keyword) ||
                     drug.bopomofo.toLowerCase().includes(keyword);
                     
                 return matchCategory && matchBrand && matchKeyword;
@@ -250,7 +307,6 @@
             renderDrugs(filtered);
         }
 
-        // 加入處方
         function addToPrescription(id) {
             const drug = database.find(d => d.id === id);
             if (drug && !prescription.find(p => p.id === id)) {
@@ -273,7 +329,6 @@
             }
         }
 
-        // 渲染已勾選的處方
         function renderPrescription() {
             const list = document.getElementById('prescriptionList');
             list.innerHTML = '';
@@ -283,7 +338,7 @@
                     <div class="presc-item ${p.isWarning ? 'warning-bg' : ''}">
                         <div>
                             <span class="${nameClass}"><strong>${p.name}</strong></span><br>
-                            <small style="color:#666;">(倍數:${p.ratio || '未知'})</small>
+                            <small style="color:#666;">(倍數:${p.ratio > 0 ? p.ratio : '⚠️ 缺資料'})</small>
                         </div>
                         <div>
                             <input type="number" min="0" step="0.1" placeholder="克/日" onchange="updateDose(${p.id}, this.value)" onkeyup="updateDose(${p.id}, this.value)"> g
@@ -294,7 +349,6 @@
             });
         }
 
-        // 核心運算：拆解生藥與賦形劑
         function calculateResult() {
             let rawHerbs = {};
             let totalExcipients = 0;
@@ -302,8 +356,6 @@
 
             prescription.forEach(p => {
                 if (p.dose > 0 && !p.isWarning && p.ratio > 0) {
-                    
-                    // 1. 計算生藥
                     let rawRatioSum = p.totalRaw;
                     for (let herb in p.ingredients) {
                         let herbWeight = p.dose * (p.ingredients[herb] / rawRatioSum) * p.ratio;
@@ -312,8 +364,6 @@
                         grandTotalRaw += herbWeight;
                     }
                     
-                    // 2. 計算吃下肚的賦形劑量 (處方克數 × 賦形劑佔總重量比例)
-                    // 總重量 = 浸膏重(生藥/倍數) + 賦形劑重
                     let extractWeight = p.totalRaw / p.ratio;
                     let formulaTotalWeight = extractWeight + p.totalExcipient;
                     
@@ -324,7 +374,6 @@
                 }
             });
 
-            // 渲染結果
             const list = document.getElementById('resultList');
             list.innerHTML = '';
             
