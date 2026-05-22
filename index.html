@@ -58,6 +58,7 @@
         /* 右側結果區塊 */
         .result-item { padding: 8px 0; border-bottom: 1px dashed #ccc; display: flex; justify-content: space-between; font-weight: bold;}
         .toxic-alert { color: #d32f2f; font-size: 12px; display: block; margin-top: 3px;} 
+        .niuxi-alert { color: #e67e22; font-size: 12px; display: block; margin-top: 3px;} 
         .total-weight { font-size: 18px; color: #d32f2f; margin-top: 15px; text-align: right; font-weight: bold;}
         
         /* 系統提示與警告狀態 */
@@ -133,7 +134,7 @@
 
     <script>
         // ==========================================
-        // ⚠️ 第 132 行：請在下方引號內，貼上您的 Google 試算表 CSV 網址
+        // ⚠️ 請在下方雙引號內，貼上您的 Google 試算表 CSV 網址
         // ==========================================
         const googleSheetCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5wPHCM9ybm9133NpX9HgFee9chFqvpvr9J2yQG8NVpzVBVeZvkOkkXI6vgva32xs8C_c2SbI5lObD/pub?output=csv";
 
@@ -144,16 +145,24 @@
         const herbDictionary = {
             "甘草(炙)": "炙甘草", "甘草（炙）": "炙甘草", "蜜甘草": "炙甘草", "炙草": "炙甘草",
             "薑": "生薑", "乾薑": "乾薑", "薑(炮)": "炮薑", "炮薑": "炮薑",
-            "桂枝(去皮)": "桂枝", "牛膝": "懷牛膝", "川牛膝": "懷牛膝",
             "半夏(薑製)": "薑半夏", "半夏": "薑半夏", "製半夏": "薑半夏",
-            "大黃(酒製)": "大黃", "大黃(酒炒)": "大黃"
+            "大黃(酒製)": "大黃", "大黃(酒炒)": "大黃",
+            "苦蔘": "苦參", "苦蔘根": "苦參", "苦參根": "苦參"
         };
         
         // 🌟【毒劇藥與安全極限警示】(單位:克，每日安全上限參考)
         const toxicAlerts = { "麻黃": 10, "附子": 15, "細辛": 3, "生南星": 3, "大黃": 15 };
 
+        // 🌟【獨立判斷方法：藥材名稱正規化與牛膝攔截】
         function normalizeHerbName(name) {
             const cleanName = name.trim();
+
+            // 針對牛膝的獨立防護判斷
+            if (cleanName === "牛膝") {
+                return "牛膝(需確認川/懷)";
+            }
+
+            // 其他藥材則透過字典翻譯，字典沒有的就維持原名
             return herbDictionary[cleanName] || cleanName;
         }
 
@@ -377,15 +386,23 @@
                 }
             });
 
-            // 渲染結果並觸發毒劇藥警示
+            // 渲染結果並觸發毒劇藥及牛膝警示
             const list = document.getElementById('resultList'); 
             list.innerHTML = '';
             Object.keys(finalHerbs).sort((a, b) => finalHerbs[b] - finalHerbs[a]).forEach(herb => {
                 if(finalHerbs[herb] > 0.01){
                     let alertHtml = '';
-                    if(toxicAlerts[herb] && finalHerbs[herb] > toxicAlerts[herb]) {
-                        alertHtml = `<span class="toxic-alert">⚠️ 超出常規劑量上限(${toxicAlerts[herb]}g)，請謹慎評估</span>`;
+                    
+                    // 獨立判斷攔截標示的牛膝
+                    if (herb === "牛膝(需確認川/懷)") {
+                        alertHtml += `<span class="niuxi-alert">⚠️ 請至表單確認並修正為川牛膝或懷牛膝</span>`;
                     }
+                    
+                    // 毒劇藥警示
+                    if(toxicAlerts[herb] && finalHerbs[herb] > toxicAlerts[herb]) {
+                        alertHtml += `<span class="toxic-alert">⚠️ 超出常規劑量上限(${toxicAlerts[herb]}g)，請謹慎評估</span>`;
+                    }
+                    
                     list.innerHTML += `
                         <li class="result-item">
                             <div>${herb} ${alertHtml}</div> 
