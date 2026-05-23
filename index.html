@@ -17,7 +17,6 @@
         .search-bar input { flex: 1; min-width: 200px;}
         .search-bar select { flex: 0.5; min-width: 120px;}
         
-        /* 藥廠過濾器樣式 */
         .brand-filters-container { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 10px; margin-bottom: 15px; }
         .brand-filters-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 14px; font-weight: bold; }
         .brand-filters { display: flex; flex-wrap: wrap; gap: 10px; max-height: 120px; overflow-y: auto; font-size: 14px;}
@@ -27,12 +26,10 @@
         .btn-small { padding: 2px 8px; font-size: 12px; cursor: pointer; background: #6c757d; color: white; border: none; border-radius: 3px;}
         .btn-small:hover { background: #5a6268; }
 
-        /* 列表樣式 */
         .drug-list, .prescription-list, .result-list { list-style: none; padding: 0; margin: 0; }
         .drug-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; position: relative; }
         .drug-item:hover { background-color: #f9f9f9; }
         
-        /* 滑鼠懸停資訊卡 (Tooltip) */
         .drug-info-wrapper { flex: 1; cursor: help; }
         .hover-card {
             display: none; position: absolute; left: 0; top: 100%; width: 95%; z-index: 10;
@@ -43,25 +40,21 @@
         .hover-card-title { font-weight: bold; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 4px; margin-bottom: 6px; }
         .hover-card p { margin: 3px 0; }
 
-        /* 按鈕與處方區塊 */
         .add-btn { background-color: #4CAF50; color: white; border: none; cursor: pointer; padding: 5px 15px; border-radius:4px;}
         .add-btn:hover { background-color: #45a049; }
         .remove-btn { background-color: #f44336; color: white; border: none; cursor: pointer; padding: 5px 10px; border-radius:4px;}
         .presc-item { background: #e8f4f8; padding: 10px; margin-bottom: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
         
-        /* 數字輸入框優化 (隱藏箭頭、極端劑量警示) */
         .presc-item input { width: 70px; text-align: center; font-size: 16px; font-weight: bold; color: #2c3e50; transition: 0.3s;}
         .presc-item input.high-dose { background-color: #ffe0b2; border: 2px solid #f57c00; color: #d84315; }
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
 
-        /* 右側結果區塊 */
         .result-item { padding: 8px 0; border-bottom: 1px dashed #ccc; display: flex; justify-content: space-between; font-weight: bold;}
         .toxic-alert { color: #d32f2f; font-size: 12px; display: block; margin-top: 3px;} 
         .niuxi-alert { color: #e67e22; font-size: 12px; display: block; margin-top: 3px;} 
         .total-weight { font-size: 18px; color: #d32f2f; margin-top: 15px; text-align: right; font-weight: bold;}
         
-        /* 系統提示與警告狀態 */
         #statusMessage { background: #fff3cd; color: #856404; padding: 10px; text-align: center; border-radius: 4px; margin-bottom: 15px; font-weight: bold; }
         .warning-text { color: #d32f2f !important; font-weight: bold; }
         .warning-bg { background-color: #ffebee !important; }
@@ -89,7 +82,7 @@
                     </div>
                 </div>
                 <div class="brand-filters" id="brandCheckboxes">
-                    </div>
+                </div>
             </div>
 
             <div class="search-bar">
@@ -110,24 +103,24 @@
             
             <div style="max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; margin-bottom: 20px;">
                 <ul class="drug-list" id="drugList">
-                    </ul>
+                </ul>
             </div>
 
             <h3>📝 目前處方 (點擊輸入一日克數)</h3>
             <div id="prescriptionList">
-                </div>
+            </div>
         </div>
 
         <div class="column right-col">
             <h3>📊 原藥材換算結果</h3>
             <p style="font-size: 13px; color: #666;">系統自動合併同類藥材。遇毒劇藥超量將顯示紅字警示。</p>
             <ul class="result-list" id="resultList">
-                </ul>
+            </ul>
             <div class="total-weight" id="totalWeightDisplay" style="border-top: 2px solid #333; padding-top:10px;">
                 總生藥重量: 0.00 g
             </div>
             <div class="total-weight" id="totalExcipientDisplay" style="color: #795548; font-size: 16px;">
-                總賦形劑量: 0.00 g
+                賦形劑/添加物總重: 0.00 g
             </div>
         </div>
     </div>
@@ -136,37 +129,44 @@
         // ==========================================
         // ⚠️ 請在下方雙引號內，貼上您的 Google 試算表 CSV 網址
         // ==========================================
-        const googleSheetCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5wPHCM9ybm9133NpX9HgFee9chFqvpvr9J2yQG8NVpzVBVeZvkOkkXI6vgva32xs8C_c2SbI5lObD/pub?output=csv";
+        const googleSheetCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5wPHCM9ybm9133NpX9HgFee9chFqvpvr9J2yQG8NVpzVBVeZvkOkkXI6vgva32xs8C_c2SbI5lObD/pub?output=csv
+";
 
         let database = []; 
         let prescription = []; 
 
-        // 🌟【同物異名正規化字典】可隨時依臨床習慣擴充
         const herbDictionary = {
             "甘草(炙)": "炙甘草", "甘草（炙）": "炙甘草", "蜜甘草": "炙甘草", "炙草": "炙甘草",
-            "薑": "生薑", "乾薑": "乾薑", "薑(炮)": "炮薑", "炮薑": "炮薑",
+            "乾薑": "乾薑", "薑(炮)": "炮薑", "炮薑": "炮薑",
             "半夏(薑製)": "薑半夏", "半夏": "薑半夏", "製半夏": "薑半夏",
             "大黃(酒製)": "大黃", "大黃(酒炒)": "大黃",
             "苦蔘": "苦參", "苦蔘根": "苦參", "苦參根": "苦參"
         };
         
-        // 🌟【毒劇藥與安全極限警示】(單位:克，每日安全上限參考)
-        const toxicAlerts = { "麻黃": 10, "附子": 15, "細辛": 3, "生南星": 3, "大黃": 15 };
+        // 🌟 擴充版：毒劇藥防護網 (包含炮製分身與藥典建議劑量)
+        const toxicAlerts = {
+            "馬錢子": { max: 0.6, range: "0.3 - 0.6g" }, "製馬錢子": { max: 0.6, range: "0.3 - 0.6g" }, "炮馬錢子": { max: 0.6, range: "0.3 - 0.6g" },
+            "川烏": { max: 3.0, range: "1.5 - 3.0g" }, "製川烏": { max: 3.0, range: "1.5 - 3.0g" }, "草烏": { max: 3.0, range: "1.5 - 3.0g" }, "製草烏": { max: 3.0, range: "1.5 - 3.0g" },
+            "甘遂": { max: 1.5, range: "0.5 - 1.5g" }, "醋甘遂": { max: 1.5, range: "0.5 - 1.5g" }, "大戟": { max: 1.5, range: "0.5 - 1.5g" },
+            "芫花": { max: 1.5, range: "0.5 - 1.5g" }, "醋芫花": { max: 1.5, range: "0.5 - 1.5g" }, "斑蝥": { max: 0.06, range: "0.03 - 0.06g" },
+            "蟾酥": { max: 0.03, range: "0.015 - 0.03g" }, "附子": { max: 15.0, range: "3.0 - 15.0g" }, "炮附子": { max: 15.0, range: "3.0 - 15.0g" },
+            "製附子": { max: 15.0, range: "3.0 - 15.0g" }, "黑順片": { max: 15.0, range: "3.0 - 15.0g" }, "白附片": { max: 15.0, range: "3.0 - 15.0g" },
+            "細辛": { max: 3.0, range: "1.0 - 3.0g" }, "遼細辛": { max: 3.0, range: "1.0 - 3.0g" }, "麻黃": { max: 10.0, range: "2.0 - 10.0g" },
+            "生麻黃": { max: 10.0, range: "2.0 - 10.0g" }, "炙麻黃": { max: 10.0, range: "2.0 - 10.0g" }, "天南星": { max: 9.0, range: "3.0 - 9.0g" },
+            "生南星": { max: 9.0, range: "3.0 - 9.0g" }, "膽南星": { max: 9.0, range: "3.0 - 9.0g" }, "製南星": { max: 9.0, range: "3.0 - 9.0g" },
+            "半夏": { max: 9.0, range: "3.0 - 9.0g" }, "生半夏": { max: 9.0, range: "3.0 - 9.0g" }, "薑半夏": { max: 9.0, range: "3.0 - 9.0g" },
+            "法半夏": { max: 9.0, range: "3.0 - 9.0g" }, "全蠍": { max: 6.0, range: "3.0 - 6.0g" }, "蜈蚣": { max: 5.0, range: "3.0 - 5.0g" },
+            "大黃": { max: 15.0, range: "3.0 - 15.0g" }, "生大黃": { max: 15.0, range: "3.0 - 15.0g" }, "酒大黃": { max: 15.0, range: "3.0 - 15.0g" },
+            "熟大黃": { max: 15.0, range: "3.0 - 15.0g" }
+        };
 
-        // 🌟【獨立判斷方法：藥材名稱正規化與牛膝攔截】
         function normalizeHerbName(name) {
             const cleanName = name.trim();
-
-            // 針對牛膝的獨立防護判斷
-            if (cleanName === "牛膝") {
-                return "牛膝(需確認川/懷)";
-            }
-
-            // 其他藥材則透過字典翻譯，字典沒有的就維持原名
+            if (cleanName === "牛膝") return "牛膝(需確認川/懷)";
+            if (cleanName === "薑" || cleanName === "姜") return "薑(需確認生/乾)";
             return herbDictionary[cleanName] || cleanName;
         }
 
-        // 解析藥材字串為物件與總重量
         function parseHerbString(str) {
             let obj = {};
             let total = 0;
@@ -200,7 +200,6 @@
                             brandCounts[brand] = (brandCounts[brand] || 0) + 1;
                         }
                         
-                        // 解析三組成分
                         const conc = parseHerbString(row['濃縮生藥組成']);
                         const raw = parseHerbString(row['原粉生藥組成']);
                         const exc = parseHerbString(row['賦形劑組成']);
@@ -227,7 +226,8 @@
                     populateBrandCheckboxes(brandCounts);
                     statusMessage.style.backgroundColor = "#d4edda"; 
                     statusMessage.style.color = "#155724";
-                    statusMessage.innerHTML = `✅ 成功連線！載入 <strong>${database.length}</strong> 筆精準純化資料。`;
+                    // 移除驚嘆號，保持專業沉穩
+                    statusMessage.innerHTML = `✅ 成功連線。載入 <strong>${database.length}</strong> 筆精準純化資料。`;
                     renderDrugs(database);
                 },
                 error: function(e) { 
@@ -255,7 +255,8 @@
             list.innerHTML = '';
             
             drugs.slice(0, 100).forEach(d => {
-                const warnTag = d.isWarning ? `<br><small style="color:#d32f2f;">⚠️ 需校正: ${d.hint}</small>` : '';
+                const warnTag = d.isWarning ? `<br><small style="color:#d32f2f;">${d.status}: ${d.hint}</small>` : '';
+                
                 const hover = `
                     <div class="hover-card">
                         <div class="hover-card-title">🔍 楚河漢界解析詳情</div>
@@ -263,7 +264,7 @@
                         <p><strong>濃縮倍數：</strong><span style="color:#e67e22; font-weight:bold;">${d.ratio > 0 ? d.ratio : '⚠️ 缺資料'}</span></p>
                         <p><strong>濃縮生藥：</strong><span style="color:#27ae60;">${d.concDisplay}</span></p>
                         <p><strong>原粉生藥：</strong><span style="color:#8e44ad;">${d.rawDisplay}</span></p>
-                        <p><strong>賦形劑：</strong><span style="color:#7f8c8d;">${d.excDisplay}</span></p>
+                        <p><strong>賦形劑/添加物：</strong><span style="color:#7f8c8d;">${d.excDisplay}</span></p>
                     </div>`;
                 list.innerHTML += `
                     <li class="drug-item ${d.isWarning ? 'warning-bg' : ''}">
@@ -277,7 +278,7 @@
                     </li>`;
             });
             if (drugs.length > 100) {
-                list.innerHTML += `<li class="drug-item" style="color:#888; justify-content:center;">...還有 ${drugs.length - 100} 筆，請縮小搜尋範圍...</li>`;
+                list.innerHTML += `<li class="drug-item" style="color:#888; justify-content:center;">...還有 ${drugs.length - 100} 筆，請縮小搜尋範圍。</li>`;
             }
         }
 
@@ -306,12 +307,10 @@
             calculateResult();
         }
 
-        // 修改劑量時，不重新渲染整個處方列表，避免輸入框失去焦點
         function updateDose(id, value) {
             const p = prescription.find(p => p.id === id);
             if (p) { 
                 p.dose = parseFloat(value) || 0; 
-                // 極端劑量視覺防呆
                 const inputEl = document.getElementById(`dose-input-${id}`);
                 if (inputEl) {
                     if (p.dose > 20) inputEl.classList.add('high-dose');
@@ -344,7 +343,6 @@
             });
         }
 
-        // 🌟【核心數學引擎】完美支援楚河漢界與防當機裝甲
         function calculateResult() {
             let finalHerbs = {}; 
             let totalExc = 0; 
@@ -353,15 +351,12 @@
             prescription.forEach(p => {
                 if (p.dose > 0 && !p.isWarning && p.ratio > 0) {
                     
-                    // 1. 算出製程實體重量 (浸膏實重 + 原粉實重 + 賦形劑實重)
-                    // 防呆：加上 || 0.0001 避免遇到全空資料時除以零當機
                     let physicalConcExtract = p.concTotalWeight / (p.ratio || 1); 
                     let physicalRawPowder = p.rawTotalWeight; 
                     let formulaTotalWeight = physicalConcExtract + physicalRawPowder + p.excTotalWeight;
                     
                     if(formulaTotalWeight <= 0) formulaTotalWeight = 0.0001; 
 
-                    // 2. 結算濃縮生藥 (需乘上倍數)
                     for (let herb in p.concHerbs) {
                         let portionInExtract = p.concHerbs[herb] / (p.concTotalWeight || 0.0001);
                         let actualWeightInFormula = portionInExtract * physicalConcExtract;
@@ -371,7 +366,6 @@
                         grandRaw += rawEquivalent;
                     }
 
-                    // 3. 結算原粉生藥 (倍數恆定為 1)
                     for (let herb in p.rawHerbs) {
                         let actualWeightInFormula = p.rawHerbs[herb]; 
                         let rawEquivalent = p.dose * (actualWeightInFormula / formulaTotalWeight) * 1.0;
@@ -380,27 +374,27 @@
                         grandRaw += rawEquivalent;
                     }
 
-                    // 4. 結算賦形劑 (患者實際吃下肚的澱粉/纖維素重量)
                     let excDose = p.dose * (p.excTotalWeight / formulaTotalWeight);
                     totalExc += excDose;
                 }
             });
 
-            // 渲染結果並觸發毒劇藥及牛膝警示
             const list = document.getElementById('resultList'); 
             list.innerHTML = '';
             Object.keys(finalHerbs).sort((a, b) => finalHerbs[b] - finalHerbs[a]).forEach(herb => {
                 if(finalHerbs[herb] > 0.01){
                     let alertHtml = '';
                     
-                    // 獨立判斷攔截標示的牛膝
                     if (herb === "牛膝(需確認川/懷)") {
                         alertHtml += `<span class="niuxi-alert">⚠️ 請至表單確認並修正為川牛膝或懷牛膝</span>`;
                     }
+                    if (herb === "薑(需確認生/乾)") {
+                        alertHtml += `<span class="niuxi-alert">⚠️ 請至表單確認並修正為生薑或乾薑</span>`;
+                    }
                     
-                    // 毒劇藥警示
-                    if(toxicAlerts[herb] && finalHerbs[herb] > toxicAlerts[herb]) {
-                        alertHtml += `<span class="toxic-alert">⚠️ 超出常規劑量上限(${toxicAlerts[herb]}g)，請謹慎評估</span>`;
+                    // 🌟 觸發藥典劑量提示，不使用驚嘆號
+                    if(toxicAlerts[herb] && finalHerbs[herb] > toxicAlerts[herb].max) {
+                        alertHtml += `<span class="toxic-alert">⚠️ 超出常規用量，藥典建議 ${toxicAlerts[herb].range}，請評估</span>`;
                     }
                     
                     list.innerHTML += `
@@ -412,10 +406,9 @@
             });
             
             document.getElementById('totalWeightDisplay').innerText = `總生藥重量: ${grandRaw.toFixed(2)} g`;
-            document.getElementById('totalExcipientDisplay').innerText = `其中包含賦形劑: ${totalExc.toFixed(2)} g`;
+            document.getElementById('totalExcipientDisplay').innerText = `賦形劑/添加物總重: ${totalExc.toFixed(2)} g`;
         }
 
-        // 網頁載入時自動啟動
         loadCloudDatabase();
     </script>
 </body>
