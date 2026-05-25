@@ -2,62 +2,101 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>小巴中醫 - 頂級實證科學中藥換算平台</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
+        /* 全域設定：加入 box-sizing 避免手機版超出螢幕 */
+        * { box-sizing: border-box; }
         body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
         .header { text-align: center; margin-bottom: 20px; color: #2c3e50; }
-        .container { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; align-items: flex-start;}
-        .column { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); flex: 1; }
+        
+        /* 容器與欄位基礎設定 */
+        .container { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; align-items: flex-start; }
+        .column { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .left-col { flex: 1.2; }
-        .right-col { flex: 0.8; background-color: #fafbfc; position: sticky; top: 20px;}
-        input, select, button { padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
-        .search-bar { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;}
-        .search-bar input { flex: 1; min-width: 200px;}
-        .search-bar select { flex: 0.5; min-width: 120px;}
+        .right-col { flex: 0.8; background-color: #fafbfc; position: sticky; top: 20px; }
+        
+        input, select, button { padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+        
+        .search-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .search-bar input { flex: 1; min-width: 200px; }
+        .search-bar select { flex: 0.5; min-width: 120px; }
         
         .brand-filters-container { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 10px; margin-bottom: 15px; }
-        .brand-filters-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 14px; font-weight: bold; }
-        .brand-filters { display: flex; flex-wrap: wrap; gap: 10px; max-height: 120px; overflow-y: auto; font-size: 14px;}
-        .brand-filters label { display: flex; align-items: center; cursor: pointer; background: #fff; padding: 4px 8px; border-radius: 20px; border: 1px solid #ddd; }
+        .brand-filters-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 14px; font-weight: bold; flex-wrap: wrap; gap: 10px;}
+        .brand-filters { display: flex; flex-wrap: wrap; gap: 10px; max-height: 120px; overflow-y: auto; font-size: 14px; }
+        .brand-filters label { display: flex; align-items: center; cursor: pointer; background: #fff; padding: 6px 10px; border-radius: 20px; border: 1px solid #ddd; }
         .brand-filters label:hover { background: #eef2f5; }
         .brand-count { color: #888; font-size: 12px; margin-left: 4px; }
-        .btn-small { padding: 2px 8px; font-size: 12px; cursor: pointer; background: #6c757d; color: white; border: none; border-radius: 3px;}
+        
+        .btn-small { padding: 4px 12px; font-size: 14px; cursor: pointer; background: #6c757d; color: white; border: none; border-radius: 4px; }
         .btn-small:hover { background: #5a6268; }
 
         .drug-list, .prescription-list, .result-list { list-style: none; padding: 0; margin: 0; }
-        .drug-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; position: relative; }
+        .drug-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; position: relative; }
         .drug-item:hover { background-color: #f9f9f9; }
         
-        .drug-info-wrapper { flex: 1; cursor: help; }
+        .drug-info-wrapper { flex: 1; cursor: help; padding-right: 10px; }
         .hover-card {
             display: none; position: absolute; left: 0; top: 100%; width: 95%; z-index: 10;
             background: #fff; border: 1px solid #2c3e50; border-radius: 6px; padding: 12px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.2); font-size: 13px; line-height: 1.6; color: #333;
         }
-        .drug-info-wrapper:hover .hover-card { display: block; }
+        
+        /* 手機版改用點擊顯示，電腦版用 hover */
+        @media (hover: hover) {
+            .drug-info-wrapper:hover .hover-card { display: block; }
+        }
+        
         .hover-card-title { font-weight: bold; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 4px; margin-bottom: 6px; }
         .hover-card p { margin: 3px 0; }
 
-        .add-btn { background-color: #4CAF50; color: white; border: none; cursor: pointer; padding: 5px 15px; border-radius:4px;}
+        .add-btn { background-color: #4CAF50; color: white; border: none; cursor: pointer; padding: 8px 15px; border-radius:4px; font-weight: bold; white-space: nowrap;}
         .add-btn:hover { background-color: #45a049; }
-        .remove-btn { background-color: #f44336; color: white; border: none; cursor: pointer; padding: 5px 10px; border-radius:4px;}
-        .presc-item { background: #e8f4f8; padding: 10px; margin-bottom: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .remove-btn { background-color: #f44336; color: white; border: none; cursor: pointer; padding: 8px 12px; border-radius:4px; font-weight: bold;}
         
-        .presc-item input { width: 70px; text-align: center; font-size: 16px; font-weight: bold; color: #2c3e50; transition: 0.3s;}
+        .presc-item { background: #e8f4f8; padding: 12px; margin-bottom: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;}
+        .presc-item-info { flex: 1; min-width: 150px;}
+        .presc-item-controls { display: flex; align-items: center; gap: 8px; }
+        
+        .presc-item input { width: 80px; text-align: center; font-size: 16px; font-weight: bold; color: #2c3e50; transition: 0.3s;}
         .presc-item input.high-dose { background-color: #ffe0b2; border: 2px solid #f57c00; color: #d84315; }
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
 
-        .result-item { padding: 8px 0; border-bottom: 1px dashed #ccc; display: flex; justify-content: space-between; font-weight: bold;}
-        .toxic-alert { color: #d32f2f; font-size: 12px; display: block; margin-top: 3px;} 
-        .niuxi-alert { color: #e67e22; font-size: 12px; display: block; margin-top: 3px;} 
+        .result-item { padding: 10px 0; border-bottom: 1px dashed #ccc; display: flex; justify-content: space-between; font-weight: bold; align-items: center;}
+        .toxic-alert { color: #d32f2f; font-size: 12px; display: block; margin-top: 3px; font-weight: normal;} 
+        .niuxi-alert { color: #e67e22; font-size: 12px; display: block; margin-top: 3px; font-weight: normal;} 
         .total-weight { font-size: 18px; color: #d32f2f; margin-top: 15px; text-align: right; font-weight: bold;}
         
-        #statusMessage { background: #fff3cd; color: #856404; padding: 10px; text-align: center; border-radius: 4px; margin-bottom: 15px; font-weight: bold; }
+        #statusMessage { background: #fff3cd; color: #856404; padding: 12px; text-align: center; border-radius: 4px; margin-bottom: 15px; font-weight: bold; }
         .warning-text { color: #d32f2f !important; font-weight: bold; }
         .warning-bg { background-color: #ffebee !important; }
+
+        /* ==========================================
+           📱 手機版響應式設計 (RWD) 核心設定
+           ========================================== */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { flex-direction: column; gap: 15px; } /* 改為上下排列 */
+            .column { width: 100%; padding: 15px; } /* 寬度撐滿螢幕 */
+            
+            /* 取消手機版的浮動置頂，避免遮擋畫面 */
+            .right-col { position: relative; top: 0; } 
+            
+            /* 搜尋列改成上下排列，更好點擊 */
+            .search-bar { flex-direction: column; }
+            .search-bar input, .search-bar select { width: 100%; }
+            
+            /* 放寬手機版藥廠選單的高度，方便滑動 */
+            .brand-filters { max-height: 150px; }
+            
+            /* 處方列表的控制按鈕在手機上佔滿整行 */
+            .presc-item { flex-direction: column; align-items: flex-start; }
+            .presc-item-controls { width: 100%; justify-content: space-between; margin-top: 5px; }
+            .presc-item input { flex: 1; }
+        }
     </style>
 </head>
 <body>
@@ -142,7 +181,6 @@
             "苦蔘": "苦參", "苦蔘根": "苦參", "苦參根": "苦參"
         };
         
-        // 🌟 擴充版：毒劇藥防護網 (包含炮製分身與藥典建議劑量)
         const toxicAlerts = {
             "馬錢子": { max: 0.6, range: "0.3 - 0.6g" }, "製馬錢子": { max: 0.6, range: "0.3 - 0.6g" }, "炮馬錢子": { max: 0.6, range: "0.3 - 0.6g" },
             "川烏": { max: 3.0, range: "1.5 - 3.0g" }, "製川烏": { max: 3.0, range: "1.5 - 3.0g" }, "草烏": { max: 3.0, range: "1.5 - 3.0g" }, "製草烏": { max: 3.0, range: "1.5 - 3.0g" },
@@ -225,7 +263,6 @@
                     populateBrandCheckboxes(brandCounts);
                     statusMessage.style.backgroundColor = "#d4edda"; 
                     statusMessage.style.color = "#155724";
-                    // 移除驚嘆號，保持專業沉穩
                     statusMessage.innerHTML = `✅ 成功連線。載入 <strong>${database.length}</strong> 筆精準純化資料。`;
                     renderDrugs(database);
                 },
@@ -267,7 +304,7 @@
                     </div>`;
                 list.innerHTML += `
                     <li class="drug-item ${d.isWarning ? 'warning-bg' : ''}">
-                        <div class="drug-info-wrapper">
+                        <div class="drug-info-wrapper" onclick="toggleMobileCard(this)">
                             <span style="color:#888;font-size:12px;">[${d.brand}] [${d.category}]</span><br>
                             <span class="${d.isWarning?'warning-text':''}" style="font-size:16px;"><strong>${d.name}</strong></span>
                             ${warnTag}
@@ -278,6 +315,16 @@
             });
             if (drugs.length > 100) {
                 list.innerHTML += `<li class="drug-item" style="color:#888; justify-content:center;">...還有 ${drugs.length - 100} 筆，請縮小搜尋範圍。</li>`;
+            }
+        }
+
+        // 手機版點擊展開詳情的小功能
+        function toggleMobileCard(element) {
+            if(window.innerWidth <= 768) {
+                const card = element.querySelector('.hover-card');
+                const isDisplayed = card.style.display === 'block';
+                document.querySelectorAll('.hover-card').forEach(c => c.style.display = 'none'); // 先關閉其他
+                card.style.display = isDisplayed ? 'none' : 'block';
             }
         }
 
@@ -325,11 +372,11 @@
             prescription.forEach(p => {
                 list.innerHTML += `
                     <div class="presc-item ${p.isWarning ? 'warning-bg' : ''}">
-                        <div>
+                        <div class="presc-item-info">
                             <span class="${p.isWarning?'warning-text':''}"><strong>${p.name}</strong></span><br>
                             <small style="color:#666;">(倍數:${p.ratio > 0 ? p.ratio : '⚠️ 缺資料'})</small>
                         </div>
-                        <div>
+                        <div class="presc-item-controls">
                             <input type="number" id="dose-input-${p.id}" class="${p.dose > 20 ? 'high-dose':''}" 
                                    min="0" step="0.1" placeholder="克/日" 
                                    value="${p.dose > 0 ? p.dose : ''}" 
@@ -391,7 +438,6 @@
                         alertHtml += `<span class="niuxi-alert">⚠️ 請至表單確認並修正為生薑或乾薑</span>`;
                     }
                     
-                    // 🌟 觸發藥典劑量提示，不使用驚嘆號
                     if(toxicAlerts[herb] && finalHerbs[herb] > toxicAlerts[herb].max) {
                         alertHtml += `<span class="toxic-alert">⚠️ 超出常規用量，藥典建議 ${toxicAlerts[herb].range}，請評估</span>`;
                     }
