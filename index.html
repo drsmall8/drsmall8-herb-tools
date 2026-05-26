@@ -3,16 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>小巴中醫 - 頂級實證科學中藥換算平台</title>
+    <title>科學中藥原藥材換算與優化平台</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/javascript-lp-solver/0.4.24/solver.min.js"></script>
     <style>
-        /* 全域設定：加入 box-sizing 避免手機版超出螢幕 */
         * { box-sizing: border-box; }
         body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
         .header { text-align: center; margin-bottom: 20px; color: #2c3e50; }
         
-        /* 容器與欄位基礎設定 */
         .container { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; align-items: flex-start; }
         .column { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .left-col { flex: 1.2; }
@@ -34,11 +32,9 @@
         .btn-small { padding: 4px 12px; font-size: 14px; cursor: pointer; background: #6c757d; color: white; border: none; border-radius: 4px; }
         .btn-small:hover { background: #5a6268; }
 
-        /* 鎖定按鈕樣式 */
         .btn-lock-inactive { background: #e0e0e0; color: #333; cursor: pointer; border: none; border-radius: 4px; padding: 6px 10px; font-size: 14px; }
         .btn-lock-active { background: #0288d1; color: white; font-weight: bold; cursor: pointer; border: none; border-radius: 4px; padding: 6px 10px; font-size: 14px; }
 
-        /* 優化推薦區塊樣式 */
         .opt-section { background: #fff; border: 2px dashed #4caf50; padding: 15px; border-radius: 8px; margin-top: 20px; }
         .opt-title { font-weight: bold; color: #2e7d32; display: flex; align-items: center; gap: 5px; font-size: 16px; margin-bottom: 5px; }
         .opt-item { background: #f1f8e9; padding: 8px 12px; border-radius: 4px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; border-left: 4px solid #4caf50; }
@@ -54,10 +50,7 @@
             box-shadow: 0 8px 16px rgba(0,0,0,0.2); font-size: 13px; line-height: 1.6; color: #333;
         }
         
-        /* 手機版改用點擊顯示，電腦版用 hover */
-        @media (hover: hover) {
-            .drug-info-wrapper:hover .hover-card { display: block; }
-        }
+        @media (hover: hover) { .drug-info-wrapper:hover .hover-card { display: block; } }
         
         .hover-card-title { font-weight: bold; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 4px; margin-bottom: 6px; }
         .hover-card p { margin: 3px 0; }
@@ -84,7 +77,6 @@
         .warning-text { color: #d32f2f !important; font-weight: bold; }
         .warning-bg { background-color: #ffebee !important; }
 
-        /* 手機版響應式設計 (RWD) 核心設定 */
         @media (max-width: 768px) {
             body { padding: 10px; }
             .container { flex-direction: column; gap: 15px; }
@@ -102,7 +94,7 @@
 <body>
 
     <div class="header">
-        <h1>科學中藥原藥材換算平台</h1>
+        <h1>科學中藥原藥材精準換算平台</h1>
         <p>支援部分拔提精準計算、同物異名合併、與極端劑量防呆把關</p>
     </div>
 
@@ -191,14 +183,14 @@
 
     <script>
         // ==========================================
-        // ⚠️ 請在下方雙引號內，貼上您的 Google 試算表 CSV 網址
+        // ⚠️ 第 1 步：請在下方雙引號內，貼上您的 Google 試算表 CSV 網址 ⚠️
         // ==========================================
         const googleSheetCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5wPHCM9ybm9133NpX9HgFee9chFqvpvr9J2yQG8NVpzVBVeZvkOkkXI6vgva32xs8C_c2SbI5lObD/pub?output=csv";
 
         let database = []; 
         let prescription = []; 
-        let globalFinalHerbs = {}; // 全域緩存，儲存當前正向計算出的原藥材總重
-        let optimizedPrescription = []; // 儲存優化後的臨時組合
+        let globalFinalHerbs = {}; 
+        let optimizedPrescription = []; 
 
         const herbDictionary = {
             "甘草(炙)": "炙甘草", "甘草（炙）": "炙甘草", "蜜甘草": "炙甘草", "炙草": "炙甘草",
@@ -319,7 +311,6 @@
             
             drugs.slice(0, 100).forEach(d => {
                 const warnTag = d.isWarning ? `<br><small style="color:#d32f2f;">${d.status}: ${d.hint}</small>` : '';
-                
                 const hover = `
                     <div class="hover-card">
                         <div class="hover-card-title">🔍 楚河漢界解析詳情</div>
@@ -434,7 +425,6 @@
 
             prescription.forEach(p => {
                 if (p.dose > 0 && !p.isWarning && p.ratio > 0) {
-                    
                     let physicalConcExtract = p.concTotalWeight / (p.ratio || 1); 
                     let physicalRawPowder = p.rawTotalWeight; 
                     let formulaTotalWeight = physicalConcExtract + physicalRawPowder + p.excTotalWeight;
@@ -445,7 +435,6 @@
                         let portionInExtract = p.concHerbs[herb] / (p.concTotalWeight || 0.0001);
                         let actualWeightInFormula = portionInExtract * physicalConcExtract;
                         let rawEquivalent = p.dose * (actualWeightInFormula / formulaTotalWeight) * p.ratio;
-                        
                         finalHerbs[herb] = (finalHerbs[herb] || 0) + rawEquivalent;
                         grandRaw += rawEquivalent;
                     }
@@ -453,7 +442,6 @@
                     for (let herb in p.rawHerbs) {
                         let actualWeightInFormula = p.rawHerbs[herb]; 
                         let rawEquivalent = p.dose * (actualWeightInFormula / formulaTotalWeight) * 1.0;
-                        
                         finalHerbs[herb] = (finalHerbs[herb] || 0) + rawEquivalent;
                         grandRaw += rawEquivalent;
                     }
@@ -463,7 +451,6 @@
                 }
             });
 
-            // 儲存至全域，供 AI 逆向優化器讀取
             globalFinalHerbs = finalHerbs;
 
             const list = document.getElementById('resultList'); 
@@ -471,18 +458,11 @@
             Object.keys(finalHerbs).sort((a, b) => finalHerbs[b] - finalHerbs[a]).forEach(herb => {
                 if(finalHerbs[herb] > 0.01){
                     let alertHtml = '';
-                    
-                    if (herb === "牛膝(需確認川/懷)") {
-                        alertHtml += `<span class="niuxi-alert">⚠️ 請至表單確認並修正為川牛膝或懷牛膝</span>`;
-                    }
-                    if (herb === "薑(需確認生/乾)") {
-                        alertHtml += `<span class="niuxi-alert">⚠️ 請至表單確認並修正為生薑或乾薑</span>`;
-                    }
-                    
+                    if (herb === "牛膝(需確認川/懷)") alertHtml += `<span class="niuxi-alert">⚠️ 請至表單確認並修正為川牛膝或懷牛膝</span>`;
+                    if (herb === "薑(需確認生/乾)") alertHtml += `<span class="niuxi-alert">⚠️ 請至表單確認並修正為生薑或乾薑</span>`;
                     if(toxicAlerts[herb] && finalHerbs[herb] > toxicAlerts[herb].max) {
                         alertHtml += `<span class="toxic-alert">⚠️ 超出常規用量，藥典建議 ${toxicAlerts[herb].range}，請評估</span>`;
                     }
-                    
                     list.innerHTML += `
                         <li class="result-item">
                             <div>${herb} ${alertHtml}</div> 
@@ -499,7 +479,6 @@
         // 🚀 AI 逆向規劃最佳化核心演算法 (MILP)
         // ==========================================
         
-        // 輔助函數：精準計算每1g產品所攜帶的特定生藥總重（融合正向邏輯）
         function getHerbCoefficient(item, herbName) {
             let physicalConcExtract = item.concTotalWeight / (item.ratio || 1); 
             let physicalRawPowder = item.rawTotalWeight; 
@@ -520,194 +499,175 @@
         }
 
         function runOptimization() {
-            const activeOrigItems = prescription.filter(p => p.dose > 0);
-            if (activeOrigItems.length === 0) {
-                alert("目前處方中沒有任何具體克數的藥品，無法進行優化。");
-                return;
-            }
+            try {
+                const activeOrigItems = prescription.filter(p => p.dose > 0);
 
-            // 1. 計算所有「已鎖定品項」所貢獻的原藥材份額
-            let lockedContribution = {};
-            prescription.forEach(p => {
-                if (p.dose > 0 && p.isLocked) {
-                    let allHerbs = new Set([...Object.keys(p.concHerbs), ...Object.keys(p.rawHerbs)]);
-                    allHerbs.forEach(herb => {
-                        let coef = getHerbCoefficient(p, herb);
-                        lockedContribution[herb] = (lockedContribution[herb] || 0) + (coef * p.dose);
-                    });
+                if (activeOrigItems.length === 0) {
+                    alert("⚠️ 無法優化：請先在處方中輸入藥品的「一日克數」！");
+                    return;
                 }
-            });
 
-            // 2. 扣除鎖定份額，計算「未鎖定部分」需要滿足的淨目標 (Net Targets)
-            let netTargets = {};
-            let hasNetTarget = false;
-            for (let herb in globalFinalHerbs) {
-                let totalTarget = globalFinalHerbs[herb];
-                let lockedAmount = lockedContribution[herb] || 0;
-                let net = totalTarget - lockedAmount;
-                if (net > 0.01) { // 超過 0.01g 的才納入矩陣計算
-                    netTargets[herb] = net;
-                    hasNetTarget = true;
+                if (activeOrigItems.length < 6) {
+                    alert("💡 溫馨提示：目前處方僅有 " + activeOrigItems.length + " 味藥，已經相當精簡，不需要啟動 AI 逆向優化囉！");
+                    return;
                 }
-            }
 
-            // 3. 建構精簡候選池 (Candidate Pool)：嚴格限制防止引進多餘不需要的原藥材
-            const checkedBrands = Array.from(document.querySelectorAll('.brand-cb:checked')).map(cb => cb.value);
-            let candidatePool = database.filter(item => {
-                if (!checkedBrands.includes(item.brand)) return false;
-                if (item.isWarning || !(item.ratio > 0)) return false;
-                
-                // 如果已在處方中且被鎖定，不可變動
-                const inPresc = prescription.find(p => p.id === item.id);
-                if (inPresc && inPresc.isLocked) return false;
+                let lockedContribution = {};
+                prescription.forEach(p => {
+                    if (p.dose > 0 && p.isLocked) {
+                        let allHerbs = new Set([...Object.keys(p.concHerbs), ...Object.keys(p.rawHerbs)]);
+                        allHerbs.forEach(herb => {
+                            let coef = getHerbCoefficient(p, herb);
+                            lockedContribution[herb] = (lockedContribution[herb] || 0) + (coef * p.dose);
+                        });
+                    }
+                });
 
-                // 臨床安全性把關：該品項含有的成分，必須是原始總處方就有的成分
-                for (let herb in item.concHerbs) {
-                    if (!globalFinalHerbs[herb] || globalFinalHerbs[herb] <= 0.01) return false;
-                }
-                for (let herb in item.rawHerbs) {
-                    if (!globalFinalHerbs[herb] || globalFinalHerbs[herb] <= 0.01) return false;
-                }
-                return true;
-            });
-
-            // 優先排序：原本就在處方但未鎖定的品項放最前面，其餘往後排
-            let prioritizedPool = [];
-            prescription.forEach(p => {
-                if (!p.isLocked && p.dose > 0) {
-                    const match = candidatePool.find(c => c.id === p.id);
-                    if (match) prioritizedPool.push(match);
-                }
-            });
-            candidatePool.forEach(c => {
-                if (!prioritizedPool.find(p => p.id === c.id)) {
-                    prioritizedPool.push(c);
-                }
-            });
-
-            // 取前 60 筆最高關聯的藥品，確保純瀏覽器端 MILP 計算在 50ms 內解決
-            prioritizedPool = prioritizedPool.slice(0, 60);
-
-            // 4. 組裝 javascript-lp-solver 混合整數線性規劃 JSON 模型
-            const tolerance = parseFloat(document.getElementById('toleranceSelect').value) || 0.05;
-            let model = {
-                optimize: "cost",
-                opType: "min",
-                constraints: {},
-                variables: {},
-                binaries: {}
-            };
-
-            // 填入各原藥材的等效上下限限制
-            for (let herb in netTargets) {
-                let targetVal = netTargets[herb];
-                model.constraints["herb_" + herb] = {
-                    min: targetVal * (1 - tolerance),
-                    max: targetVal * (1 + tolerance)
-                };
-            }
-
-            let hasVariables = false;
-            prioritizedPool.forEach(item => {
-                let x_key = "x_" + item.id; // 克數變數
-                let y_key = "y_" + item.id; // 是否啟用 (0或1) 變數
-                let link_key = "link_" + item.id; // Big-M 限制式
-
-                model.constraints[link_key] = { max: 0 };
-
-                let x_var = { cost: 0.01 }; // 輕微懲罰總克數，傾向總藥粉最輕
-                x_var[link_key] = 1;
-
-                let contributesToNet = false;
-                for (let herb in netTargets) {
-                    let coef = getHerbCoefficient(item, herb);
-                    if (coef > 0) {
-                        x_var["herb_" + herb] = coef;
-                        contributesToNet = true;
+                let netTargets = {};
+                let hasNetTarget = false;
+                for (let herb in globalFinalHerbs) {
+                    let totalTarget = globalFinalHerbs[herb];
+                    let lockedAmount = lockedContribution[herb] || 0;
+                    let net = totalTarget - lockedAmount;
+                    if (net > 0.01) { 
+                        netTargets[herb] = net;
+                        hasNetTarget = true;
                     }
                 }
 
-                // 只有當該藥品對當前急需的淨目標有成分貢獻時，才寫入決策矩陣
-                if (contributesToNet) {
-                    let y_var = { cost: 1000 }; // 強烈處罰品項數，逼迫求解器瘋狂精簡品項
-                    y_var[link_key] = -30; // 單品項單日上限設定為 30g (Big-M)
-
-                    model.variables[x_key] = x_var;
-                    model.variables[y_key] = y_var;
-                    model.binaries[y_key] = 1;
-                    hasVariables = true;
+                if (!hasNetTarget) {
+                    alert("⚠️ 無法優化：您已經把所有藥品都「鎖定」了，AI 沒有空間可以幫您替換精簡喔！");
+                    return;
                 }
-            });
 
-            const resultArea = document.getElementById('optimizationResultArea');
-            const optList = document.getElementById('optimizedList');
+                const checkedBrands = Array.from(document.querySelectorAll('.brand-cb:checked')).map(cb => cb.value);
+                let candidatePool = database.filter(item => {
+                    if (!checkedBrands.includes(item.brand)) return false;
+                    if (item.isWarning || !(item.ratio > 0)) return false;
+                    
+                    const inPresc = prescription.find(p => p.id === item.id);
+                    if (inPresc && inPresc.isLocked) return false;
 
-            if (!hasVariables) {
-                alert("⚠️ 目前勾選的藥廠中，找不到合適的未鎖定候選藥品來填補成分缺口。");
-                return;
+                    for (let herb in item.concHerbs) {
+                        if (!globalFinalHerbs[herb] || globalFinalHerbs[herb] <= 0.01) return false;
+                    }
+                    for (let herb in item.rawHerbs) {
+                        if (!globalFinalHerbs[herb] || globalFinalHerbs[herb] <= 0.01) return false;
+                    }
+                    return true;
+                });
+
+                let prioritizedPool = [];
+                prescription.forEach(p => {
+                    if (!p.isLocked && p.dose > 0) {
+                        const match = candidatePool.find(c => c.id === p.id);
+                        if (match) prioritizedPool.push(match);
+                    }
+                });
+                candidatePool.forEach(c => {
+                    if (!prioritizedPool.find(p => p.id === c.id)) prioritizedPool.push(c);
+                });
+
+                prioritizedPool = prioritizedPool.slice(0, 60);
+
+                const tolerance = parseFloat(document.getElementById('toleranceSelect').value) || 0.05;
+                let model = { optimize: "cost", opType: "min", constraints: {}, variables: {}, binaries: {} };
+
+                for (let herb in netTargets) {
+                    let targetVal = netTargets[herb];
+                    model.constraints["herb_" + herb] = {
+                        min: targetVal * (1 - tolerance),
+                        max: targetVal * (1 + tolerance)
+                    };
+                }
+
+                let hasVariables = false;
+                prioritizedPool.forEach(item => {
+                    let x_key = "x_" + item.id, y_key = "y_" + item.id, link_key = "link_" + item.id;
+                    model.constraints[link_key] = { max: 0 };
+
+                    let x_var = { cost: 0.01 }; 
+                    x_var[link_key] = 1;
+
+                    let contributesToNet = false;
+                    for (let herb in netTargets) {
+                        let coef = getHerbCoefficient(item, herb);
+                        if (coef > 0) {
+                            x_var["herb_" + herb] = coef;
+                            contributesToNet = true;
+                        }
+                    }
+
+                    if (contributesToNet) {
+                        let y_var = { cost: 1000 }; 
+                        y_var[link_key] = -30; 
+                        model.variables[x_key] = x_var;
+                        model.variables[y_key] = y_var;
+                        model.binaries[y_key] = 1;
+                        hasVariables = true;
+                    }
+                });
+
+                const resultArea = document.getElementById('optimizationResultArea');
+                const optList = document.getElementById('optimizedList');
+
+                if (!hasVariables) {
+                    alert("❌ 解析失敗：在您目前勾選的「廠牌」中，找不到合適的單方或複方來替換。請嘗試在左上方勾選更多廠牌！");
+                    return;
+                }
+
+                let results = solver.Solve(model);
+
+                if (!results || !results.feasible) {
+                    alert("🔍 優化失敗：AI 無法在目前的「誤差範圍 (±" + (tolerance * 100) + "%)」內，拼湊出更精簡的等效處方。\n\n💡 建議解法：\n1. 將容許誤差調寬 (例如改為 ±10% 或 ±15%)\n2. 勾選更多進貨藥廠");
+                    resultArea.style.display = 'none';
+                    return;
+                }
+
+                optimizedPrescription = [];
+                let origCount = activeOrigItems.length;
+                let optCount = 0;
+
+                prescription.forEach(p => {
+                    if (p.dose > 0 && p.isLocked) {
+                        optimizedPrescription.push({ id: p.id, name: p.name, brand: p.brand, ratio: p.ratio, dose: p.dose, isLocked: true });
+                        optCount++;
+                    }
+                });
+
+                prioritizedPool.forEach(item => {
+                    let x_key = "x_" + item.id;
+                    if (results[x_key] && results[x_key] > 0.02) { 
+                        let finalDose = parseFloat(results[x_key].toFixed(2));
+                        optimizedPrescription.push({ id: item.id, name: item.name, brand: item.brand, ratio: item.ratio, dose: finalDose, isLocked: false });
+                        optCount++;
+                    }
+                });
+
+                if (optCount >= origCount) {
+                    alert("💡 分析完畢：您目前的處方 (" + origCount + " 味藥) 已經是最佳解，AI 找不到更精簡的組合了！");
+                    resultArea.style.display = 'none';
+                    return;
+                }
+
+                optList.innerHTML = '';
+                optimizedPrescription.forEach(opt => {
+                    optList.innerHTML += `
+                        <div class="opt-item">
+                            <span>[${opt.brand}] <strong>${opt.name}</strong> ${opt.isLocked ? '🔒 已保留' : ''}</span>
+                            <span style="color:#2e7d32; font-weight:bold;">${opt.dose} g/日</span>
+                        </div>`;
+                });
+
+                document.getElementById('optSummaryText').innerText = `📊 品項精簡成果：由 ${origCount} 味 ➔ 濃縮為 ${optCount} 味！`;
+                resultArea.style.display = 'block';
+
+            } catch (error) {
+                console.error("優化引擎錯誤:", error);
+                alert("🚨 系統發生預期外的錯誤，請重新整理網頁後再試一次。");
             }
-
-            // 呼叫線性規劃引擎求解
-            let results = solver.Solve(model);
-
-            if (!results.feasible) {
-                alert("⚠️ 在當前的誤差與廠牌限制下，無法配出更精簡的等效解。建議調寬「容許誤差範圍」(例如改為 ±10%)，或勾選更多常用藥廠後再試一次！");
-                resultArea.style.display = 'none';
-                return;
-            }
-
-            // 5. 輸出優化結果
-            optimizedPrescription = [];
-            let origCount = activeOrigItems.length;
-            let optCount = 0;
-
-            // 優先接回原本就被鎖定的固定資產
-            prescription.forEach(p => {
-                if (p.dose > 0 && p.isLocked) {
-                    optimizedPrescription.push({
-                        id: p.id,
-                        name: p.name,
-                        brand: p.brand,
-                        ratio: p.ratio,
-                        dose: p.dose,
-                        isLocked: true
-                    });
-                    optCount++;
-                }
-            });
-
-            // 加入演算法精算出的最佳化配置
-            prioritizedPool.forEach(item => {
-                let x_key = "x_" + item.id;
-                if (results[x_key] && results[x_key] > 0.02) { // 剔除極小浮點數噪音
-                    let finalDose = parseFloat(results[x_key].toFixed(2));
-                    optimizedPrescription.push({
-                        id: item.id,
-                        name: item.name,
-                        brand: item.brand,
-                        ratio: item.ratio,
-                        dose: finalDose,
-                        isLocked: false
-                    });
-                    optCount++;
-                }
-            });
-
-            // 渲染推薦清單至前台
-            optList.innerHTML = '';
-            optimizedPrescription.forEach(opt => {
-                optList.innerHTML += `
-                    <div class="opt-item">
-                        <span>[${opt.brand}] <strong>${opt.name}</strong> ${opt.isLocked ? '🔒 已保留' : ''}</span>
-                        <span style="color:#2e7d32; font-weight:bold;">${opt.dose} g/日</span>
-                    </div>`;
-            });
-
-            document.getElementById('optSummaryText').innerText = `📊 品項精簡成果：由 ${origCount} 味 ➔ 濃縮為 ${optCount} 味！`;
-            resultArea.style.display = 'block';
         }
 
-        // 套用優化結果至目前正式處方
         function applyOptimization() {
             if (optimizedPrescription.length === 0) return;
             
