@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>小巴中醫 - 臨床實證科學中藥平台 (教學版)</title>
+    <title>科學中藥原藥材精準換算與教學平台</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         * { box-sizing: border-box; }
@@ -25,11 +25,8 @@
         .brand-filters-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 14px; font-weight: bold; flex-wrap: wrap; gap: 10px;}
         .brand-filters { display: flex; flex-wrap: wrap; gap: 10px; max-height: 120px; overflow-y: auto; font-size: 14px; }
         .brand-filters label { display: flex; align-items: center; cursor: pointer; background: #fff; padding: 6px 10px; border-radius: 20px; border: 1px solid #ddd; }
-        .brand-filters label:hover { background: #eef2f5; }
-        .brand-count { color: #888; font-size: 12px; margin-left: 4px; }
         
         .btn-small { padding: 4px 12px; font-size: 14px; cursor: pointer; background: #6c757d; color: white; border: none; border-radius: 4px; }
-        .btn-small:hover { background: #5a6268; }
 
         .opt-section { background: #fff; border: 2px dashed #0288d1; padding: 15px; border-radius: 8px; margin-top: 20px; }
         .opt-title { font-weight: bold; color: #0277bd; display: flex; align-items: center; gap: 5px; font-size: 16px; margin-bottom: 5px; }
@@ -38,29 +35,28 @@
         .plan-card { background: #f8fbff; border: 1px solid #b3e5fc; border-radius: 6px; padding: 12px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .plan-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e1f5fe; padding-bottom: 8px; margin-bottom: 8px; }
         .plan-title { font-weight: bold; color: #0277bd; font-size: 15px; }
-        .plan-item { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; border-bottom: 1px dashed #eee; }
+        .plan-item { display: flex; justify-content: space-between; font-size: 14px; padding: 6px 0; border-bottom: 1px dashed #eee; align-items: center;}
         .plan-item:last-child { border-bottom: none; }
 
-        /* 結構啟發卡片樣式 (無劑量) */
+        /* 結構啟發卡片樣式 */
         .struct-card { background: #fff8e1; border: 1px solid #ffecb3; border-radius: 6px; padding: 12px; margin-bottom: 10px; }
         .struct-header { font-weight: bold; color: #f57f17; font-size: 14px; margin-bottom: 8px; border-bottom: 1px dashed #ffe082; padding-bottom: 4px;}
         .struct-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-        .tag-formula { background: #ffcc80; color: #e65100; padding: 4px 8px; border-radius: 12px; font-size: 13px; font-weight: bold; }
-        .tag-single { background: #fff3e0; color: #ef6c00; padding: 4px 8px; border-radius: 12px; font-size: 13px; border: 1px solid #ffe0b2; }
+        .tag-formula { background: #ffcc80; color: #e65100; padding: 4px 8px; border-radius: 12px; font-size: 13px; font-weight: bold; border: 1px solid #ffa726; cursor: help;}
+        .tag-single { background: #fff3e0; color: #ef6c00; padding: 4px 8px; border-radius: 12px; font-size: 13px; border: 1px solid #ffe0b2; cursor: help;}
 
         .drug-list, .prescription-list, .result-list { list-style: none; padding: 0; margin: 0; }
         .drug-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; position: relative; }
         .drug-item:hover { background-color: #f9f9f9; }
         
-        .drug-info-wrapper { flex: 1; cursor: help; padding-right: 10px; }
+        /* 💡 全域 Hover 卡片樣式 (修復重點) */
+        .has-hover { position: relative; cursor: help; }
         .hover-card {
-            display: none; position: absolute; left: 0; top: 100%; width: 95%; z-index: 10;
+            display: none; position: absolute; left: 0; top: 100%; width: max-content; max-width: 300px; z-index: 999;
             background: #fff; border: 1px solid #2c3e50; border-radius: 6px; padding: 12px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2); font-size: 13px; line-height: 1.6; color: #333;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25); font-size: 13px; line-height: 1.6; color: #333; text-align: left;
         }
-        
-        @media (hover: hover) { .drug-info-wrapper:hover .hover-card { display: block; } }
-        
+        @media (hover: hover) { .has-hover:hover .hover-card { display: block; } }
         .hover-card-title { font-weight: bold; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 4px; margin-bottom: 6px; }
         .hover-card p { margin: 3px 0; }
 
@@ -68,14 +64,11 @@
         .add-btn:hover { background-color: #45a049; }
         .remove-btn { background-color: #f44336; color: white; border: none; cursor: pointer; padding: 8px 12px; border-radius:4px; font-weight: bold;}
         .apply-btn { background-color: #0288d1; color: white; border: none; cursor: pointer; padding: 6px 12px; border-radius:4px; font-size: 13px; font-weight: bold;}
-        .apply-btn:hover { background-color: #0277bd; }
         
         .presc-item { background: #e8f4f8; padding: 12px; margin-bottom: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;}
         .presc-item-info { flex: 1; min-width: 150px;}
         .presc-item-controls { display: flex; align-items: center; gap: 8px; }
-        
-        .presc-item input { width: 80px; text-align: center; font-size: 16px; font-weight: bold; color: #2c3e50; transition: 0.3s;}
-        .presc-item input.high-dose { background-color: #ffe0b2; border: 2px solid #f57c00; color: #d84315; }
+        .presc-item input { width: 80px; text-align: center; font-size: 16px; font-weight: bold; color: #2c3e50;}
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
 
@@ -84,8 +77,8 @@
         .total-weight { font-size: 18px; color: #d32f2f; margin-top: 15px; text-align: right; font-weight: bold;}
         
         #statusMessage { background: #fff3cd; color: #856404; padding: 12px; text-align: center; border-radius: 4px; margin-bottom: 15px; font-weight: bold; }
-        .warning-text { color: #d32f2f !important; font-weight: bold; }
         .warning-bg { background-color: #ffebee !important; }
+        .warning-text { color: #d32f2f !important; }
 
         /* 標籤頁切換樣式 */
         .tab-container { display: flex; margin-bottom: 15px; border-bottom: 2px solid #ddd; }
@@ -93,16 +86,11 @@
         .tab-btn.active { color: #0277bd; border-bottom: 3px solid #0277bd; background: #fff; }
 
         @media (max-width: 768px) {
-            body { padding: 10px; }
             .container { flex-direction: column; gap: 15px; }
             .column { width: 100%; padding: 15px; }
             .right-col { position: relative; top: 0; } 
             .search-bar { flex-direction: column; }
             .search-bar input, .search-bar select { width: 100%; }
-            .brand-filters { max-height: 150px; }
-            .presc-item { flex-direction: column; align-items: flex-start; }
-            .presc-item-controls { width: 100%; justify-content: space-between; margin-top: 5px; }
-            .presc-item input { flex: 1; }
         }
     </style>
 </head>
@@ -153,22 +141,17 @@
             <div class="opt-section">
                 <div class="opt-title">🎓 AI 處方本質分析與教學推薦</div>
                 <p style="font-size:12px; color:#666; margin:0 0 10px 0;">深入分析疊方背後的「原藥材本質」，提供嚴謹的劑量等效方案，以及不計劑量的純結構啟發。</p>
-                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                    <button class="add-btn" style="background-color:#0288d1; width:100%; font-size:16px;" onclick="runEducationalAnalysis()">🧠 啟動臨床處方深度分析</button>
-                </div>
+                <button class="add-btn" style="background-color:#0288d1; width:100%; font-size:16px;" onclick="runEducationalAnalysis()">🧠 啟動臨床處方深度分析</button>
                 
                 <div id="analysisResultArea" style="display:none; margin-top:15px; border-top:1px solid #b3e5fc; padding-top:15px;">
-                    
                     <div class="tab-container">
                         <button class="tab-btn active" id="tabStrict" onclick="switchTab('strict')">⚖️ 嚴謹劑量等效方案</button>
                         <button class="tab-btn" id="tabStructure" onclick="switchTab('structure')">🧭 結構方義啟發 (無劑量)</button>
                     </div>
-
                     <div id="strictPlansArea">
                         <p style="font-size:13px; color:#01579b; margin-top:0;">尋找完全對應原藥材「克數誤差極小」的替代方案。</p>
                         <div id="optimizedList"></div>
                     </div>
-
                     <div id="structurePlansArea" style="display:none;">
                         <p style="font-size:13px; color:#e65100; margin-top:0;">不考慮實際開立克數，純粹從「涵蓋成分」的角度，建議最精簡的方劑骨架。</p>
                         <div id="structuralList"></div>
@@ -181,15 +164,13 @@
             <h3>📊 原藥材換算結果</h3>
             <p style="font-size: 13px; color: #666;">此為您開立處方的「原藥材本質」。教學引擎將以此為目標進行重新建構。</p>
             <ul class="result-list" id="resultList"></ul>
-            <div class="total-weight" id="totalWeightDisplay" style="border-top: 2px solid #333; padding-top:10px;">
-                總生藥重量: 0.00 g
-            </div>
+            <div class="total-weight" id="totalWeightDisplay" style="border-top: 2px solid #333; padding-top:10px;">總生藥重量: 0.00 g</div>
         </div>
     </div>
 
     <script>
         // ==========================================
-        // ⚠️ 第 1 步：請在下方雙引號內，貼上您的 Google 試算表 CSV 網址 ⚠️
+        // ⚠️ 請在下方雙引號內，貼上您的 Google 試算表 CSV 網址 ⚠️
         // ==========================================
         const googleSheetCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5wPHCM9ybm9133NpX9HgFee9chFqvpvr9J2yQG8NVpzVBVeZvkOkkXI6vgva32xs8C_c2SbI5lObD/pub?output=csv";
 
@@ -207,9 +188,9 @@
         };
         
         const toxicAlerts = {
-            "附子": { max: 15.0, range: "3.0 - 15.0g" }, "炮附子": { max: 15.0, range: "3.0 - 15.0g" },
-            "麻黃": { max: 10.0, range: "2.0 - 10.0g" }, "細辛": { max: 3.0, range: "1.0 - 3.0g" },
-            "半夏": { max: 9.0, range: "3.0 - 9.0g" }, "大黃": { max: 15.0, range: "3.0 - 15.0g" }
+            "附子": { max: 15.0 }, "炮附子": { max: 15.0 },
+            "麻黃": { max: 10.0 }, "細辛": { max: 3.0 },
+            "半夏": { max: 9.0 }, "大黃": { max: 15.0 }
         };
 
         function normalizeHerbName(name) {
@@ -236,6 +217,29 @@
             return { obj, total, displayStr: str.replace(/\|/g, ', ') || '無' };
         }
 
+        // 💡 提取共用的 Hover 懸停卡片 HTML 產生器
+        function getHoverCardHTML(d) {
+            return `
+                <div class="hover-card" onclick="event.stopPropagation();">
+                    <div class="hover-card-title">🔍 楚河漢界解析詳情</div>
+                    <p><strong>許可證：</strong>${d.license}</p>
+                    <p><strong>濃縮倍數：</strong><span style="color:#e67e22; font-weight:bold;">${d.ratio > 0 ? d.ratio : '⚠️ 缺資料'}</span></p>
+                    <p><strong>濃縮生藥：</strong><span style="color:#27ae60;">${d.concDisplay}</span></p>
+                    <p><strong>原粉生藥：</strong><span style="color:#8e44ad;">${d.rawDisplay}</span></p>
+                    <p><strong>賦形劑/添加物：</strong><span style="color:#7f8c8d;">${d.excDisplay}</span></p>
+                </div>`;
+        }
+
+        // 手機版點擊展開功能
+        function toggleMobileCard(element) {
+            if(window.innerWidth <= 768) {
+                const card = element.querySelector('.hover-card');
+                const isDisplayed = card.style.display === 'block';
+                document.querySelectorAll('.hover-card').forEach(c => c.style.display = 'none'); 
+                card.style.display = isDisplayed ? 'none' : 'block';
+            }
+        }
+
         function loadCloudDatabase() {
             const statusMessage = document.getElementById('statusMessage');
             Papa.parse(googleSheetCsvUrl, {
@@ -256,7 +260,8 @@
                         const raw = parseHerbString(row['原粉生藥組成']);
                         const exc = parseHerbString(row['賦形劑組成']);
                         
-                        let uniqueHerbs = new Set([...Object.keys(conc.obj), ...Object.keys(raw.obj)]);
+                        // 預先計算好該藥品的所有成分陣列，大幅減少後續演算法運算負擔
+                        let herbArr = Object.keys({...conc.obj, ...raw.obj});
 
                         database.push({
                             id: index, license: row['許可證字號'] || '', brand: brand, name: row['顯示名稱'] || '',
@@ -265,7 +270,8 @@
                             concHerbs: conc.obj, concTotalWeight: conc.total, concDisplay: conc.displayStr,
                             rawHerbs: raw.obj, rawTotalWeight: raw.total, rawDisplay: raw.displayStr,
                             excObj: exc.obj, excTotalWeight: exc.total, excDisplay: exc.displayStr,
-                            uniqueHerbCount: uniqueHerbs.size 
+                            herbArray: herbArr, 
+                            uniqueHerbCount: herbArr.length
                         });
                     });
                     
@@ -297,9 +303,10 @@
                 const tag = d.uniqueHerbCount === 1 ? '<span style="color:#e67e22;">[單方]</span>' : '<span style="color:#2980b9;">[複方]</span>';
                 list.innerHTML += `
                     <li class="drug-item ${d.isWarning ? 'warning-bg' : ''}">
-                        <div class="drug-info-wrapper" onclick="toggleMobileCard(this)">
+                        <div class="drug-info-wrapper has-hover" onclick="toggleMobileCard(this)">
                             <span style="color:#888;font-size:12px;">[${d.brand}] ${tag}</span><br>
-                            <span style="font-size:16px;"><strong>${d.name}</strong></span>
+                            <span class="${d.isWarning?'warning-text':''}" style="font-size:16px;"><strong>${d.name}</strong></span>
+                            ${getHoverCardHTML(d)}
                         </div>
                         <button class="add-btn" onclick="addToPrescription(${d.id})">加入</button>
                     </li>`;
@@ -326,10 +333,7 @@
 
         function updateDose(id, value) {
             const p = prescription.find(p => p.id === id);
-            if (p) { 
-                p.dose = parseFloat(value) || 0; 
-                calculateResult(); 
-            }
+            if (p) { p.dose = parseFloat(value) || 0; calculateResult(); }
         }
 
         function renderPrescription() {
@@ -338,14 +342,14 @@
             prescription.forEach(p => {
                 list.innerHTML += `
                     <div class="presc-item">
-                        <div class="presc-item-info">
+                        <div class="presc-item-info has-hover" onclick="toggleMobileCard(this)">
+                            <span style="font-size:15px; color:#666;">[${p.brand}]</span><br>
                             <span><strong>${p.name}</strong></span>
+                            ${getHoverCardHTML(p)}
                         </div>
                         <div class="presc-item-controls">
-                            <input type="number" id="dose-input-${p.id}" min="0" step="0.1" placeholder="克/日" 
-                                   value="${p.dose > 0 ? p.dose : ''}" 
-                                   onkeyup="updateDose(${p.id}, this.value)" 
-                                   onchange="updateDose(${p.id}, this.value)"> g
+                            <input type="number" min="0" step="0.1" placeholder="克/日" value="${p.dose > 0 ? p.dose : ''}" 
+                                   onkeyup="updateDose(${p.id}, this.value)" onchange="updateDose(${p.id}, this.value)"> g
                             <button class="remove-btn" onclick="removePrescription(${p.id})">X</button>
                         </div>
                     </div>`;
@@ -358,7 +362,6 @@
             prescription.forEach(p => {
                 if (p.dose > 0 && !p.isWarning && p.ratio > 0) {
                     let formulaTotalWeight = (p.concTotalWeight / (p.ratio || 1)) + p.rawTotalWeight + p.excTotalWeight || 0.0001; 
-                    
                     for (let herb in p.concHerbs) {
                         let actualWeight = (p.concHerbs[herb] / (p.concTotalWeight || 0.0001)) * (p.concTotalWeight / p.ratio);
                         let rawEq = p.dose * (actualWeight / formulaTotalWeight) * p.ratio;
@@ -399,7 +402,6 @@
             return coef;
         }
 
-        // 切換顯示面板
         function switchTab(tabName) {
             document.getElementById('tabStrict').classList.remove('active');
             document.getElementById('tabStructure').classList.remove('active');
@@ -436,12 +438,17 @@
             let singleHerbs = validDB.filter(d => d.uniqueHerbCount === 1);
             let formulas = validDB.filter(d => d.uniqueHerbCount > 1);
 
-            function getSingleHerbItem(herbName) {
-                return singleHerbs.find(s => (s.concHerbs[herbName] || s.rawHerbs[herbName]));
-            }
+            // 💡 優化：建立單方快速查找表 (Lookup Map)，避免無盡的迴圈
+            let singleLookup = {};
+            singleHerbs.forEach(s => {
+                if(s.herbArray.length > 0 && !singleLookup[s.herbArray[0]]) {
+                    singleLookup[s.herbArray[0]] = s;
+                }
+            });
+            function getSingleHerbItem(herbName) { return singleLookup[herbName]; }
 
             // ==============================================
-            // 核心 1：嚴謹劑量等效分析 (維持原有邏輯)
+            // 核心 1：嚴謹劑量等效分析
             // ==============================================
             generatedTeachingPlans = [];
             
@@ -458,9 +465,10 @@
             }
 
             formulas.forEach(formula => {
-                let fHerbs = Object.keys({...formula.concHerbs, ...formula.rawHerbs});
+                // 💡 優化：直接使用預先處理好的陣列
+                let fHerbs = formula.herbArray; 
                 let isSubset = true;
-                fHerbs.forEach(h => { if (!netTargets[h]) isSubset = false; });
+                for(let h of fHerbs) { if (!netTargets[h]) { isSubset = false; break; } }
                 if (!isSubset) return; 
 
                 let maxDose = Infinity;
@@ -471,7 +479,6 @@
                         if (limit < maxDose) maxDose = limit;
                     }
                 });
-
                 maxDose = Math.floor(maxDose * 10) / 10; 
                 if (maxDose < 1.0) return; 
 
@@ -513,7 +520,15 @@
                     let itemsHtml = '';
                     plan.combination.forEach(c => {
                         let tag = c.item.uniqueHerbCount === 1 ? '單方' : '複方';
-                        itemsHtml += `<div class="plan-item"><span>[${c.item.brand}] ${c.item.name} <small>(${tag})</small></span> <span><strong>${c.dose} g</strong></span></div>`;
+                        // 💡 渲染含有 Hover 標籤的 HTML
+                        itemsHtml += `
+                            <div class="plan-item">
+                                <div class="has-hover" onclick="toggleMobileCard(this)" style="display:inline-block;">
+                                    <span>[${c.item.brand}] <strong>${c.item.name}</strong> <small>(${tag})</small></span>
+                                    ${getHoverCardHTML(c.item)}
+                                </div>
+                                <span><strong>${c.dose} g</strong></span>
+                            </div>`;
                     });
 
                     optList.innerHTML += `
@@ -528,51 +543,55 @@
             }
 
             // ==============================================
-            // 核心 2：方劑結構啟發 (不計劑量，僅成分配對)
+            // 核心 2：方劑結構啟發 (解決 Lag 問題)
             // ==============================================
             let structuralPlans = [];
             
-            // 挑選所有「成分沒有超出目前處方」的候選複方
+            // 過濾出「成分完全涵蓋於處方內」的候選複方
             let candidateFormulas = formulas.filter(f => {
-                let fHerbs = Object.keys({...f.concHerbs, ...f.rawHerbs});
-                return fHerbs.every(h => targetHerbNames.includes(h));
+                return f.herbArray.every(h => targetHerbNames.includes(h));
             });
+            
+            // 💡 終極防當機優化：限制最多拿 40 個最豐富的複方來進行雙重疊代，避免產生 O(N^2) 指數爆炸
+            candidateFormulas.sort((a, b) => b.uniqueHerbCount - a.uniqueHerbCount);
+            let topCandidates = candidateFormulas.slice(0, 40); 
 
-            // 1. 產生 [1個複方 + N個單方] 的結構
-            candidateFormulas.forEach(f1 => {
-                let f1Herbs = Object.keys({...f1.concHerbs, ...f1.rawHerbs});
-                let missing = targetHerbNames.filter(h => !f1Herbs.includes(h));
+            // 1. 單一核心複方推算
+            topCandidates.forEach(f1 => {
+                let missing = targetHerbNames.filter(h => !f1.herbArray.includes(h));
                 let valid = true;
                 let singlesToUse = [];
                 for(let h of missing) {
                     let sh = getSingleHerbItem(h);
-                    if(!sh) { valid = false; break; } // 如果缺少的單方藥廠沒進貨，這個結構就失效
+                    if(!sh) { valid = false; break; } 
                     singlesToUse.push(sh);
                 }
                 if(valid) {
                     structuralPlans.push({
                         formulas: [f1], singles: singlesToUse,
-                        totalItems: 1 + singlesToUse.length, formulaHerbCount: f1Herbs.length
+                        totalItems: 1 + singlesToUse.length, formulaHerbCount: f1.uniqueHerbCount
                     });
                 }
             });
 
-            // 2. 產生 [2個複方 + N個單方] 的疊方結構 (適合複雜處方)
-            for(let i=0; i<candidateFormulas.length; i++) {
-                for(let j=i+1; j<candidateFormulas.length; j++) {
-                    let f1 = candidateFormulas[i];
-                    let f2 = candidateFormulas[j];
-                    let f1Herbs = Object.keys({...f1.concHerbs, ...f1.rawHerbs});
-                    let f2Herbs = Object.keys({...f2.concHerbs, ...f2.rawHerbs});
-                    let combinedHerbs = new Set([...f1Herbs, ...f2Herbs]);
+            // 2. 雙核心複方推算
+            for(let i=0; i<topCandidates.length; i++) {
+                let f1 = topCandidates[i];
+                for(let j=i+1; j<topCandidates.length; j++) {
+                    let f2 = topCandidates[j];
                     
-                    let missing = targetHerbNames.filter(h => !combinedHerbs.has(h));
+                    // 💡 優化：直接使用 Set 計算聯集，避開效能吃緊的 Object.keys 與 Array 轉換
+                    let combinedHerbs = new Set(f1.herbArray);
+                    for(let h of f2.herbArray) combinedHerbs.add(h);
+                    
                     let valid = true;
                     let singlesToUse = [];
-                    for(let h of missing) {
-                        let sh = getSingleHerbItem(h);
-                        if(!sh) { valid = false; break; }
-                        singlesToUse.push(sh);
+                    for(let h of targetHerbNames) {
+                        if(!combinedHerbs.has(h)){
+                            let sh = getSingleHerbItem(h);
+                            if(!sh) { valid = false; break; }
+                            singlesToUse.push(sh);
+                        }
                     }
                     if(valid) {
                         structuralPlans.push({
@@ -583,13 +602,11 @@
                 }
             }
 
-            // 排序邏輯：1. 總品項越少越好  2. 複方涵蓋的原藥材越多越好 (代表結構越完整)
             structuralPlans.sort((a, b) => {
                 if(a.totalItems !== b.totalItems) return a.totalItems - b.totalItems;
                 return b.formulaHerbCount - a.formulaHerbCount;
             });
 
-            // 去除重複的結構 (避免同方劑組合重複出現)
             let uniqueStructPlans = [];
             let seenSignatures = new Set();
             for(let p of structuralPlans) {
@@ -597,7 +614,7 @@
                 if(!seenSignatures.has(sig)) {
                     seenSignatures.add(sig);
                     uniqueStructPlans.push(p);
-                    if(uniqueStructPlans.length >= 3) break; // 只取前 3 個最具啟發性的結構
+                    if(uniqueStructPlans.length >= 3) break; 
                 }
             }
 
@@ -610,12 +627,12 @@
                 uniqueStructPlans.forEach((plan, index) => {
                     let tagsHtml = '';
                     plan.formulas.forEach(f => {
-                        tagsHtml += `<span class="tag-formula">📦 ${f.name}</span>`;
+                        tagsHtml += `<div class="tag-formula has-hover" onclick="toggleMobileCard(this)">📦 ${f.name}${getHoverCardHTML(f)}</div>`;
                     });
                     if (plan.singles.length > 0) {
-                        tagsHtml += `<span style="color:#ccc;">+</span>`;
+                        tagsHtml += `<span style="color:#ccc; line-height:28px;">+</span>`;
                         plan.singles.forEach(s => {
-                            tagsHtml += `<span class="tag-single">${s.name}</span>`;
+                            tagsHtml += `<div class="tag-single has-hover" onclick="toggleMobileCard(this)">${s.name}${getHoverCardHTML(s)}</div>`;
                         });
                     }
                     
@@ -627,9 +644,8 @@
                 });
             }
 
-            // 顯示分析結果區塊
             document.getElementById('analysisResultArea').style.display = 'block';
-            switchTab('strict'); // 預設顯示嚴謹劑量面板
+            switchTab('strict'); 
         }
 
         function applyPlan(index) {
