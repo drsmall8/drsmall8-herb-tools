@@ -31,14 +31,12 @@
         .opt-section { background: #fff; border: 2px dashed #0288d1; padding: 15px; border-radius: 8px; margin-top: 20px; }
         .opt-title { font-weight: bold; color: #0277bd; display: flex; align-items: center; gap: 5px; font-size: 16px; margin-bottom: 5px; }
         
-        /* 嚴謹教學方案卡片樣式 */
         .plan-card { background: #f8fbff; border: 1px solid #b3e5fc; border-radius: 6px; padding: 12px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .plan-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e1f5fe; padding-bottom: 8px; margin-bottom: 8px; }
         .plan-title { font-weight: bold; color: #0277bd; font-size: 15px; }
         .plan-item { display: flex; justify-content: space-between; font-size: 14px; padding: 6px 0; border-bottom: 1px dashed #eee; align-items: center;}
         .plan-item:last-child { border-bottom: none; }
 
-        /* 結構啟發卡片樣式 */
         .struct-card { background: #fff8e1; border: 1px solid #ffecb3; border-radius: 6px; padding: 12px; margin-bottom: 10px; }
         .struct-header { font-weight: bold; color: #f57f17; font-size: 14px; margin-bottom: 8px; border-bottom: 1px dashed #ffe082; padding-bottom: 4px;}
         .struct-tags { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -138,7 +136,7 @@
 
             <div class="opt-section">
                 <div class="opt-title">🎓 AI 處方本質分析與教學推薦</div>
-                <p style="font-size:12px; color:#666; margin:0 0 10px 0;">深入分析疊方背後的「原藥材本質」，提供嚴謹的劑量等效方案，以及不計劑量的純結構啟發。</p>
+                <p style="font-size:12px; color:#666; margin:0 0 10px 0;">深入分析疊方背後的「原藥材本質」，提供嚴謹的劑量等效方案，以及不計劑量的多變結構啟發。</p>
                 <button class="add-btn" style="background-color:#0288d1; width:100%; font-size:16px;" onclick="runEducationalAnalysis()">🧠 啟動臨床處方深度分析</button>
                 
                 <div id="analysisResultArea" style="display:none; margin-top:15px; border-top:1px solid #b3e5fc; padding-top:15px;">
@@ -147,11 +145,11 @@
                         <button class="tab-btn" id="tabStructure" onclick="switchTab('structure')">🧭 結構方義啟發 (無劑量)</button>
                     </div>
                     <div id="strictPlansArea">
-                        <p style="font-size:13px; color:#01579b; margin-top:0;">尋找完全對應原藥材「克數誤差極小」的替代方案（強制展現不同的核心方義）。</p>
+                        <p style="font-size:13px; color:#01579b; margin-top:0;">尋找完全對應原藥材「克數誤差極小」的替代方案。</p>
                         <div id="optimizedList"></div>
                     </div>
                     <div id="structurePlansArea" style="display:none;">
-                        <p style="font-size:13px; color:#e65100; margin-top:0;">不考慮開立克數，純粹從「涵蓋成分」建議最精簡的骨架（提供 5 組不同的核心思路）。</p>
+                        <p style="font-size:13px; color:#e65100; margin-top:0;">純粹從「涵蓋成分」推薦極致分歧的精簡骨架，提供高達 5 組不同視野。</p>
                         <div id="structuralList"></div>
                     </div>
                 </div>
@@ -168,7 +166,7 @@
 
     <script>
         // ==========================================
-        // ⚠️ 第 1 步：請在下方雙引號內，貼上您的 Google 試算表 CSV 網址 ⚠️
+        // ⚠️ 請在下方雙引號內，貼上您的 Google 試算表 CSV 網址 ⚠️
         // ==========================================
         const googleSheetCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5wPHCM9ybm9133NpX9HgFee9chFqvpvr9J2yQG8NVpzVBVeZvkOkkXI6vgva32xs8C_c2SbI5lObD/pub?output=csv";
 
@@ -256,7 +254,7 @@
                         const raw = parseHerbString(row['原粉生藥組成']);
                         const exc = parseHerbString(row['賦形劑組成']);
                         
-                        let herbArr = Object.keys({...conc.obj, ...raw.obj});
+                        let herbArr = Object.keys({...conc.obj, ...raw.obj}).sort(); // 預先排序，加速比對
 
                         database.push({
                             id: index, license: row['許可證字號'] || '', brand: brand, name: row['顯示名稱'] || '',
@@ -412,11 +410,9 @@
             }
         }
 
-        // 💡 關鍵新增：本質方名萃取函數 (去除廠牌、劑型後綴)
-        function getCoreName(name) {
-            return name.replace(/[\(（].*?[\)）]/g, '') // 去除括號與廠牌
-                       .replace(/濃縮|顆粒|細粒|微粒|膠囊|錠劑|散劑|丸劑|浸膏|液/g, '') // 去除劑型
-                       .trim();
+        // 💡 幫助畫面呈現更乾淨的「拔除廠牌」函數 (僅供 UI 顯示使用)
+        function getCleanDisplayName(name) {
+            return name.replace(/[\(（].*?[\)）]/g, '').replace(/濃縮|顆粒|細粒|微粒|膠囊|錠劑|散劑|丸劑|浸膏|液/g, '').trim();
         }
 
         function runEducationalAnalysis() {
@@ -449,7 +445,7 @@
             function getSingleHerbItem(herbName) { return singleLookup[herbName]; }
 
             // ==============================================
-            // 核心 1：嚴謹劑量等效分析 (加入核心方強制去重)
+            // 核心 1：嚴謹劑量等效分析 (導入本質基因去重)
             // ==============================================
             generatedTeachingPlans = [];
             
@@ -502,22 +498,23 @@
                 }
 
                 if (isValid) {
-                    generatedTeachingPlans.push({ title: `正統方義推薦：以【${getCoreName(formula.name)}】為主軸`, isPureSingle: false, combination: currentComb, score: formulaCoverage });
+                    generatedTeachingPlans.push({ title: `正統方義推薦：以【${getCleanDisplayName(formula.name)}】為主軸`, isPureSingle: false, combination: currentComb, score: formulaCoverage });
                 }
             });
 
             generatedTeachingPlans.sort((a, b) => b.score - a.score);
             
-            // 💡 嚴謹方案去重過濾：確保每種核心方劑只出現一次
+            // 💡 嚴謹方案去重：以「成分組合」作為核心方劑的身分證
             let finalDisplayPlans = [];
-            let seenStrictCores = new Set();
+            let seenStrictIdentities = new Set();
             for (let plan of generatedTeachingPlans) {
                 if (plan.isPureSingle) continue;
                 let coreFormula = plan.combination[0].item;
-                let coreName = getCoreName(coreFormula.name);
+                // 用成分陣列轉成字串當作絕對 ID，這樣就算是不同廠牌或誤加贅字也能 100% 擋下
+                let coreIdentity = coreFormula.herbArray.join(','); 
                 
-                if (!seenStrictCores.has(coreName)) {
-                    seenStrictCores.add(coreName);
+                if (!seenStrictIdentities.has(coreIdentity)) {
+                    seenStrictIdentities.add(coreIdentity);
                     finalDisplayPlans.push(plan);
                     if (finalDisplayPlans.length >= 4) break;
                 }
@@ -557,7 +554,7 @@
             }
 
             // ==============================================
-            // 核心 2：方劑結構啟發 (加入強制主軸分歧，並擴增至 5 組)
+            // 核心 2：方劑結構啟發 (極致多變分歧法)
             // ==============================================
             let structuralPlans = [];
             
@@ -610,56 +607,76 @@
                 }
             }
 
-            structuralPlans.sort((a, b) => {
+            // 💡 取得某個方案的「絕對身分證」(無視廠牌，只看成分組成)
+            function getPlanAbsoluteSignature(plan) {
+                let fSig = plan.formulas.map(f => f.herbArray.join(',')).sort().join(' + ');
+                let sSig = plan.singles.map(s => s.herbArray[0]).sort().join(',');
+                return fSig + " | " + sSig;
+            }
+
+            // 💡 取得某個方案用到的所有「核心複方成分基因」(用來強迫主軸分歧)
+            function getPlanFormulaConcepts(plan) {
+                return plan.formulas.map(f => f.herbArray.join(','));
+            }
+
+            // 階段一：把成分完全一樣的思路剔除 (例如 A 廠葛根湯 + 單方 vs B 廠葛根湯 + 單方)
+            let deduplicatedPlans = [];
+            let seenSignatures = new Set();
+            for(let p of structuralPlans) {
+                let sig = getPlanAbsoluteSignature(p);
+                if(!seenSignatures.has(sig)) {
+                    seenSignatures.add(sig);
+                    deduplicatedPlans.push(p);
+                }
+            }
+
+            // 依照品項少、涵蓋成分多進行排序
+            deduplicatedPlans.sort((a, b) => {
                 if(a.totalItems !== b.totalItems) return a.totalItems - b.totalItems;
                 return b.formulaHerbCount - a.formulaHerbCount;
             });
 
-            let uniqueStructPlans = [];
-            let seenPrimaryCores = new Set();
-            let seenSignatures = new Set();
+            let finalDiversePlans = [];
+            let usedFormulaConcepts = new Set();
+            let remainingPlans = [];
 
-            // 💡 第一階段：尋找「主導複方完全不同」的極致分歧思路
-            for(let p of structuralPlans) {
-                let sortedFormulas = [...p.formulas].sort((a,b) => b.uniqueHerbCount - a.uniqueHerbCount);
-                let primaryCore = getCoreName(sortedFormulas[0].name);
-                let exactSignature = p.formulas.map(f => getCoreName(f.name)).sort().join('+');
-
-                if (!seenPrimaryCores.has(primaryCore) && !seenSignatures.has(exactSignature)) {
-                    seenPrimaryCores.add(primaryCore);
-                    seenSignatures.add(exactSignature);
-                    uniqueStructPlans.push(p);
-                    if(uniqueStructPlans.length >= 5) break; 
+            // 階段二：強制多變挑選 (絕對不允許下一個方案用到上一個方案用過的複方)
+            for(let p of deduplicatedPlans) {
+                let concepts = getPlanFormulaConcepts(p);
+                let hasOverlap = concepts.some(c => usedFormulaConcepts.has(c));
+                
+                if(!hasOverlap) {
+                    finalDiversePlans.push(p);
+                    concepts.forEach(c => usedFormulaConcepts.add(c));
+                    if(finalDiversePlans.length >= 5) break;
+                } else {
+                    remainingPlans.push(p); // 暫存備用
                 }
             }
 
-            // 💡 第二階段 (保險機制)：如果極致分歧找不到 5 組，就放寬條件，允許主方重複但次要方劑必須不同的組合
-            if (uniqueStructPlans.length < 5) {
-                for(let p of structuralPlans) {
-                    let exactSignature = p.formulas.map(f => getCoreName(f.name)).sort().join('+');
-                    if (!seenSignatures.has(exactSignature)) {
-                        seenSignatures.add(exactSignature);
-                        uniqueStructPlans.push(p);
-                        if(uniqueStructPlans.length >= 5) break; 
-                    }
+            // 階段三：保底填充 (如果極端多變的方案不到 5 種，才從備用方案中補齊 5 種)
+            if(finalDiversePlans.length < 5) {
+                for(let p of remainingPlans) {
+                    finalDiversePlans.push(p);
+                    if(finalDiversePlans.length >= 5) break;
                 }
             }
 
             const structList = document.getElementById('structuralList');
             structList.innerHTML = '';
             
-            if (uniqueStructPlans.length === 0) {
+            if (finalDiversePlans.length === 0) {
                 structList.innerHTML = `<p style="color:#d32f2f;">無法生成結構啟發：查無合適的對應方劑。</p>`;
             } else {
-                uniqueStructPlans.forEach((plan, index) => {
+                finalDiversePlans.forEach((plan, index) => {
                     let tagsHtml = '';
                     plan.formulas.forEach(f => {
-                        tagsHtml += `<div class="tag-formula has-hover" onclick="toggleMobileCard(this)">📦 ${f.name}${getHoverCardHTML(f)}</div>`;
+                        tagsHtml += `<div class="tag-formula has-hover" onclick="toggleMobileCard(this)">📦 ${getCleanDisplayName(f.name)}${getHoverCardHTML(f)}</div>`;
                     });
                     if (plan.singles.length > 0) {
                         tagsHtml += `<span style="color:#ccc; line-height:28px;">+</span>`;
                         plan.singles.forEach(s => {
-                            tagsHtml += `<div class="tag-single has-hover" onclick="toggleMobileCard(this)">${s.name}${getHoverCardHTML(s)}</div>`;
+                            tagsHtml += `<div class="tag-single has-hover" onclick="toggleMobileCard(this)">${getCleanDisplayName(s.name)}${getHoverCardHTML(s)}</div>`;
                         });
                     }
                     
