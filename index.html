@@ -49,7 +49,7 @@
         .drug-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; position: relative; }
         .drug-item:hover { background-color: #f9f9f9; }
         
-        /* 💡 全域 Hover 卡片樣式 (修復重點) */
+        /* 💡 全域 Hover 卡片樣式 */
         .has-hover { position: relative; cursor: help; }
         .hover-card {
             display: none; position: absolute; left: 0; top: 100%; width: max-content; max-width: 300px; z-index: 999;
@@ -153,7 +153,7 @@
                         <div id="optimizedList"></div>
                     </div>
                     <div id="structurePlansArea" style="display:none;">
-                        <p style="font-size:13px; color:#e65100; margin-top:0;">不考慮實際開立克數，純粹從「涵蓋成分」的角度，建議最精簡的方劑骨架。</p>
+                        <p style="font-size:13px; color:#e65100; margin-top:0;">不考慮實際開立克數，純粹從「涵蓋成分」的角度，建議最精簡的方劑骨架（提供 1~5 組不同的核心思路）。</p>
                         <div id="structuralList"></div>
                     </div>
                 </div>
@@ -217,7 +217,6 @@
             return { obj, total, displayStr: str.replace(/\|/g, ', ') || '無' };
         }
 
-        // 💡 提取共用的 Hover 懸停卡片 HTML 產生器
         function getHoverCardHTML(d) {
             return `
                 <div class="hover-card" onclick="event.stopPropagation();">
@@ -230,7 +229,6 @@
                 </div>`;
         }
 
-        // 手機版點擊展開功能
         function toggleMobileCard(element) {
             if(window.innerWidth <= 768) {
                 const card = element.querySelector('.hover-card');
@@ -260,7 +258,6 @@
                         const raw = parseHerbString(row['原粉生藥組成']);
                         const exc = parseHerbString(row['賦形劑組成']);
                         
-                        // 預先計算好該藥品的所有成分陣列，大幅減少後續演算法運算負擔
                         let herbArr = Object.keys({...conc.obj, ...raw.obj});
 
                         database.push({
@@ -438,7 +435,6 @@
             let singleHerbs = validDB.filter(d => d.uniqueHerbCount === 1);
             let formulas = validDB.filter(d => d.uniqueHerbCount > 1);
 
-            // 💡 優化：建立單方快速查找表 (Lookup Map)，避免無盡的迴圈
             let singleLookup = {};
             singleHerbs.forEach(s => {
                 if(s.herbArray.length > 0 && !singleLookup[s.herbArray[0]]) {
@@ -448,7 +444,7 @@
             function getSingleHerbItem(herbName) { return singleLookup[herbName]; }
 
             // ==============================================
-            // 核心 1：嚴謹劑量等效分析
+            // 核心 1：嚴謹劑量等效分析 (維持原有邏輯)
             // ==============================================
             generatedTeachingPlans = [];
             
@@ -465,7 +461,6 @@
             }
 
             formulas.forEach(formula => {
-                // 💡 優化：直接使用預先處理好的陣列
                 let fHerbs = formula.herbArray; 
                 let isSubset = true;
                 for(let h of fHerbs) { if (!netTargets[h]) { isSubset = false; break; } }
@@ -520,7 +515,6 @@
                     let itemsHtml = '';
                     plan.combination.forEach(c => {
                         let tag = c.item.uniqueHerbCount === 1 ? '單方' : '複方';
-                        // 💡 渲染含有 Hover 標籤的 HTML
                         itemsHtml += `
                             <div class="plan-item">
                                 <div class="has-hover" onclick="toggleMobileCard(this)" style="display:inline-block;">
@@ -543,16 +537,14 @@
             }
 
             // ==============================================
-            // 核心 2：方劑結構啟發 (解決 Lag 問題)
+            // 核心 2：方劑結構啟發 (升級：強制思路分歧 + 擴增至 5 組)
             // ==============================================
             let structuralPlans = [];
             
-            // 過濾出「成分完全涵蓋於處方內」的候選複方
             let candidateFormulas = formulas.filter(f => {
                 return f.herbArray.every(h => targetHerbNames.includes(h));
             });
             
-            // 💡 終極防當機優化：限制最多拿 40 個最豐富的複方來進行雙重疊代，避免產生 O(N^2) 指數爆炸
             candidateFormulas.sort((a, b) => b.uniqueHerbCount - a.uniqueHerbCount);
             let topCandidates = candidateFormulas.slice(0, 40); 
 
@@ -580,7 +572,6 @@
                 for(let j=i+1; j<topCandidates.length; j++) {
                     let f2 = topCandidates[j];
                     
-                    // 💡 優化：直接使用 Set 計算聯集，避開效能吃緊的 Object.keys 與 Array 轉換
                     let combinedHerbs = new Set(f1.herbArray);
                     for(let h of f2.herbArray) combinedHerbs.add(h);
                     
@@ -602,6 +593,7 @@
                 }
             }
 
+            // 排序邏輯維持：優先找最精簡的，次之找複方涵蓋率最高的
             structuralPlans.sort((a, b) => {
                 if(a.totalItems !== b.totalItems) return a.totalItems - b.totalItems;
                 return b.formulaHerbCount - a.formulaHerbCount;
@@ -610,11 +602,15 @@
             let uniqueStructPlans = [];
             let seenSignatures = new Set();
             for(let p of structuralPlans) {
-                let sig = [...p.formulas.map(f=>f.id), ...p.singles.map(s=>s.id)].sort().join(',');
-                if(!seenSignatures.has(sig)) {
-                    seenSignatures.add(sig);
+                // 💡 升級點：強制過濾掉藥廠名稱，只抓取「核心方劑名稱」來當作比對特徵
+                // 例如：把 "葛根湯濃縮顆粒(順天堂)" 變成 "葛根湯濃縮顆粒"
+                let coreNames = p.formulas.map(f => f.name.replace(/[\(（].*?[\)）]/g, '').trim()).sort().join(' + ');
+                
+                // 如果這個核心方劑的組合還沒出現過，才把它加進去
+                if(!seenSignatures.has(coreNames)) {
+                    seenSignatures.add(coreNames);
                     uniqueStructPlans.push(p);
-                    if(uniqueStructPlans.length >= 3) break; 
+                    if(uniqueStructPlans.length >= 5) break; // 💡 增加到 5 組解法
                 }
             }
 
@@ -645,7 +641,7 @@
             }
 
             document.getElementById('analysisResultArea').style.display = 'block';
-            switchTab('strict'); 
+            switchTab('structure'); // 自動切換到結構啟發頁籤方便查看成果
         }
 
         function applyPlan(index) {
