@@ -161,7 +161,7 @@
                         <div id="optimizedList"></div>
                     </div>
                     <div id="structurePlansArea" style="display:none;">
-                        <p style="font-size:13px; color:#e65100; margin-top:0;">導入經典中醫的「加減方」思維，允許從複方中扣除 1~2 味多餘藥材，展現最精簡的骨架與 5 種分歧思路。</p>
+                        <p style="font-size:13px; color:#e65100; margin-top:0;">導入經典中醫的「加減方」思維，允許從複方中扣除 1~5 味多餘藥材，展現最精簡的骨架與 5 種分歧思路。</p>
                         <div id="structuralList"></div>
                     </div>
                 </div>
@@ -187,7 +187,6 @@
         let globalFinalHerbs = {}; 
         let generatedTeachingPlans = []; 
 
-        // 💡 新增：同物異名合併 (加入金銀花群組)
         const herbDictionary = {
             "甘草(炙)": "炙甘草", "甘草（炙）": "炙甘草", "蜜甘草": "炙甘草", "炙草": "炙甘草",
             "乾薑": "乾薑", "薑(炮)": "炮薑", "炮薑": "炮薑",
@@ -203,7 +202,6 @@
             "半夏": { max: 9.0 }, "大黃": { max: 15.0 }
         };
 
-        // 💡 新增：動物類藥材圖譜特徵庫
         const animalKeywords = ['龍骨', '牡蠣', '阿膠', '殭蠶', '蟬蛻', '龜板', '龜膠', '鹿角', '鹿膠', '蠍', '螵蛸', '雞子黃', '內金', '豬膽', '蛤蚧', '石決明', '蜈蚣', '地龍', '水蛭', '土鱉', '虻蟲', '斑蝥', '鱉甲', '穿山甲', '水牛角', '玳瑁', '海馬', '牛黃', '麝香', '靈脂', '夜明砂', '望月砂', '蠶砂', '紫河車'];
 
         function isAnimalHerb(herbName) {
@@ -371,7 +369,6 @@
             });
         }
 
-        // 💡 顯示用淨化函數
         function getCleanDisplayName(name) {
             return name.replace(/[\(（].*?[\)）]/g, '').replace(/濃縮|顆粒|細粒|微粒|膠囊|錠劑|散劑|丸劑|浸膏|液/g, '').trim();
         }
@@ -412,7 +409,6 @@
                     let alertHtml = '';
                     let sourceNames = Array.from(herbSources[herb] || []).map(name => getCleanDisplayName(name)).join('、');
 
-                    // 💡 新增：動物類藥材雷達標籤
                     if (isAnimalHerb(herb)) {
                         alertHtml += `<span class="tag-animal">🍖 動物類</span>`;
                     }
@@ -473,7 +469,6 @@
             }
             if (targetHerbNames.length === 0) return;
 
-            // 💡 取得「純素友善模式」狀態
             const isVeganMode = document.getElementById('veganModeToggle').checked;
             if (isVeganMode) {
                 let animalTargets = targetHerbNames.filter(h => isAnimalHerb(h));
@@ -486,7 +481,6 @@
 
             const checkedBrands = Array.from(document.querySelectorAll('.brand-cb:checked')).map(cb => cb.value);
             
-            // 💡 資料庫過濾機制 (支援純素模式)
             let validDB = database.filter(item => {
                 if (!checkedBrands.includes(item.brand) || item.isWarning || item.ratio <= 0) return false;
                 if (isVeganMode && item.herbArray.some(h => isAnimalHerb(h))) return false;
@@ -638,14 +632,15 @@
             }
 
             // ==============================================
-            // 核心 2：方劑結構啟發 (加減法)
+            // 核心 2：方劑結構啟發 (加減法，放寬至 5 味)
             // ==============================================
             let structuralPlans = [];
+            // 💡 調整篩選條件：放寬容許減去的剩餘藥材數量 <= 5
             let unifiedCandidates = formulas.map(f => {
                 let surplus = f.herbArray.filter(h => !targetHerbNames.includes(h));
                 let matchCount = f.herbArray.filter(h => targetHerbNames.includes(h)).length;
                 return { formula: f, surplus: surplus, matchCount: matchCount };
-            }).filter(item => item.surplus.length <= 2 && item.matchCount >= 2); 
+            }).filter(item => item.surplus.length <= 5 && item.matchCount >= 2); 
 
             unifiedCandidates.sort((a, b) => b.matchCount - a.matchCount);
             let topCandidates = unifiedCandidates.slice(0, 40).map(item => item.formula); 
@@ -654,7 +649,7 @@
                 let combinedHerbs = new Set(f1.herbArray);
                 let surplus = [...combinedHerbs].filter(h => !targetHerbNames.includes(h));
                 
-                if (surplus.length <= 2) {
+                if (surplus.length <= 5) {
                     let valid = true;
                     let singlesToUse = [];
                     for(let h of targetHerbNames) {
@@ -684,7 +679,7 @@
                     
                     let surplus = [...combinedHerbs].filter(h => !targetHerbNames.includes(h));
                     
-                    if (surplus.length <= 2) {
+                    if (surplus.length <= 5) {
                         let valid = true;
                         let singlesToUse = [];
                         for(let h of targetHerbNames) {
@@ -793,7 +788,7 @@
             }
 
             document.getElementById('analysisResultArea').style.display = 'block';
-            switchTab('strict'); 
+            switchTab('structure'); 
         }
 
         function applyPlan(index) {
