@@ -31,6 +31,7 @@
         .opt-section { background: #fff; border: 2px dashed #0288d1; padding: 15px; border-radius: 8px; margin-top: 20px; }
         .opt-title { font-weight: bold; color: #0277bd; display: flex; align-items: center; gap: 5px; font-size: 16px; margin-bottom: 5px; }
         
+        /* 教學方案與結構卡片樣式 */
         .plan-card { background: #f8fbff; border: 1px solid #b3e5fc; border-radius: 6px; padding: 12px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .plan-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e1f5fe; padding-bottom: 8px; margin-bottom: 8px; }
         .plan-title { font-weight: bold; color: #0277bd; font-size: 15px; }
@@ -41,6 +42,7 @@
         .struct-header { font-weight: bold; color: #f57f17; font-size: 14px; margin-bottom: 8px; border-bottom: 1px dashed #ffe082; padding-bottom: 4px;}
         .struct-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center;}
         
+        /* 標籤視覺設計 */
         .tag-formula { background: #ffcc80; color: #e65100; padding: 4px 8px; border-radius: 12px; font-size: 13px; font-weight: bold; border: 1px solid #ffa726; cursor: help;}
         .tag-single { background: #fff3e0; color: #ef6c00; padding: 4px 8px; border-radius: 12px; font-size: 13px; border: 1px solid #ffe0b2; cursor: help;}
         .tag-minus { background: #ffebee; color: #c62828; padding: 4px 8px; border-radius: 12px; font-size: 13px; font-weight: bold; border: 1px solid #ffcdd2; cursor: default; }
@@ -371,6 +373,11 @@
             return name.replace(/[\(（].*?[\)）]/g, '').replace(/濃縮|顆粒|細粒|微粒|膠囊|錠劑|散劑|丸劑|浸膏|液/g, '').trim();
         }
 
+        // 💡 新增：萃取純粹藥材字根的函數 (防呆：防止去生薑加乾薑、去白芍加芍藥)
+        function getCoreHerbName(name) {
+            return name.replace(/炙|生|白|赤|乾|炮|製|藥|粉|炒|熟/g, '').trim();
+        }
+
         function calculateResult() {
             let finalHerbs = {}; 
             let grandRaw = 0;
@@ -630,35 +637,47 @@
             }
 
             // ==============================================
-            // 核心 2：方劑結構啟發 (💡 修正：加權計分與缺口容忍)
+            // 核心 2：方劑結構啟發 (加入加權懲罰與字根防呆鎖)
             // ==============================================
             let structuralPlans = [];
             
-            // 1. 初步篩選出符合條件的候選複方 (命中 >=2 味，且多餘藥材 <= 5 味)
             let unifiedCandidates = formulas.map(f => {
                 let surplus = f.herbArray.filter(h => !targetHerbNames.includes(h));
                 let matchCount = f.herbArray.filter(h => targetHerbNames.includes(h)).length;
                 return { formula: f, surplus: surplus, matchCount: matchCount };
             }).filter(item => item.surplus.length <= 5 && item.matchCount >= 2); 
 
-            // 💡 修正 1：導入加權計分法 (扣除多餘藥材的懲罰分數，讓漂亮骨架優先入選)
+            // 💡 修正 1：導入加權懲罰計分法，把那些需要大量減去藥材的「巨型大雜燴」踢出排行榜
             unifiedCandidates.sort((a, b) => {
                 let scoreA = a.matchCount - (a.surplus.length * 1.5);
                 let scoreB = b.matchCount - (b.surplus.length * 1.5);
                 return scoreB - scoreA;
             });
             
-            // 💡 擴大候選池以容納加減方可能性
             let topCandidates = unifiedCandidates.slice(0, 60).map(item => item.formula); 
 
-            // 💡 演算法 2-1：單一核心複方推算
             topCandidates.forEach(f1 => {
                 let combinedHerbs = new Set(f1.herbArray);
                 let surplus = [...combinedHerbs].filter(h => !targetHerbNames.includes(h));
+                let missing = targetHerbNames.filter(h => !combinedHerbs.has(h));
                 
+                // 💡 修正 2：啟動「字根防呆鎖」，拒絕去甘草加甘草的愚蠢操作
+                let hasSillySwap = false;
+                for (let m of surplus) {
+                    let coreM = getCoreHerbName(m);
+                    for (let ah of missing) {
+                        let coreAh = getCoreHerbName(ah);
+                        if (coreM === coreAh || (coreM.length > 0 && coreAh.includes(coreM)) || (coreAh.length > 0 && coreM.includes(coreAh))) {
+                            hasSillySwap = true; break;
+                        }
+                    }
+                    if (hasSillySwap) break;
+                }
+                if (hasSillySwap) return; // 終止這個沒有啟發性的方案
+
                 if (surplus.length <= 5) {
                     let singlesToUse = [];
-                    let missingSingles = []; // 💡 修正 2：容忍沒有科中的單方 (如膠飴)
+                    let missingSingles = []; 
                     for(let h of targetHerbNames) {
                         if(!combinedHerbs.has(h)) {
                             let sh = getSingleHerbItem(h);
@@ -678,16 +697,33 @@
                 }
             });
 
-            // 💡 演算法 2-2：雙核心複方疊算
             for(let i=0; i<topCandidates.length; i++) {
                 let f1 = topCandidates[i];
                 for(let j=i+1; j<topCandidates.length; j++) {
                     let f2 = topCandidates[j];
+                    
+                    // 💡 修正 3：啟動「同名排斥鎖」，拒絕相同方劑疊加
+                    if (getCleanDisplayName(f1.name) === getCleanDisplayName(f2.name)) continue;
+
                     let combinedHerbs = new Set(f1.herbArray);
                     for(let h of f2.herbArray) combinedHerbs.add(h);
                     
                     let surplus = [...combinedHerbs].filter(h => !targetHerbNames.includes(h));
+                    let missing = targetHerbNames.filter(h => !combinedHerbs.has(h));
                     
+                    let hasSillySwap = false;
+                    for (let m of surplus) {
+                        let coreM = getCoreHerbName(m);
+                        for (let ah of missing) {
+                            let coreAh = getCoreHerbName(ah);
+                            if (coreM === coreAh || (coreM.length > 0 && coreAh.includes(coreM)) || (coreAh.length > 0 && coreM.includes(coreAh))) {
+                                hasSillySwap = true; break;
+                            }
+                        }
+                        if (hasSillySwap) break;
+                    }
+                    if (hasSillySwap) continue;
+
                     if (surplus.length <= 5) {
                         let singlesToUse = [];
                         let missingSingles = [];
@@ -715,7 +751,7 @@
                 let fSig = plan.formulas.map(f => f.herbArray.join(',')).sort().join(' + ');
                 let mSig = plan.minusHerbs.sort().join(',');
                 let sSig = plan.singles.map(s => s.herbArray[0]).sort().join(',');
-                let msSig = plan.missingSingles.sort().join(','); // 加入缺少的藥材作為簽名的一部分
+                let msSig = plan.missingSingles.sort().join(','); 
                 return fSig + " | " + mSig + " | " + sSig + " | " + msSig;
             }
             
@@ -733,7 +769,6 @@
                 }
             }
 
-            // 排序：總步驟數越少越好，有效涵蓋藥材越多越好
             deduplicatedPlans.sort((a, b) => {
                 if(a.totalItems !== b.totalItems) return a.totalItems - b.totalItems;
                 return b.formulaHerbCount - a.formulaHerbCount;
@@ -772,12 +807,10 @@
                 finalDiversePlans.forEach((plan, index) => {
                     let tagsHtml = '';
                     
-                    // 1. 渲染核心複方
                     plan.formulas.forEach(f => {
                         tagsHtml += `<div class="tag-formula has-hover" onclick="toggleMobileCard(this)">📦 ${getCleanDisplayName(f.name)}${getHoverCardHTML(f)}</div>`;
                     });
                     
-                    // 2. 渲染減去 (❌ 去) 的藥材
                     if (plan.minusHerbs.length > 0) {
                         tagsHtml += `<span style="color:#ccc; line-height:28px;">-</span>`;
                         plan.minusHerbs.forEach(mh => {
@@ -785,7 +818,6 @@
                         });
                     }
                     
-                    // 3. 渲染加入 (🌿 加) 的單方
                     if (plan.singles.length > 0) {
                         tagsHtml += `<span style="color:#ccc; line-height:28px;">+</span>`;
                         plan.singles.forEach(s => {
@@ -793,7 +825,6 @@
                         });
                     }
 
-                    // 4. 💡 渲染缺少 (⚠️ 缺) 的藥材 (容忍機制的視覺呈現)
                     if (plan.missingSingles && plan.missingSingles.length > 0) {
                         tagsHtml += `<span style="color:#ccc; line-height:28px;">+</span>`;
                         plan.missingSingles.forEach(ms => {
