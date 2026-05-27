@@ -31,7 +31,6 @@
         .opt-section { background: #fff; border: 2px dashed #0288d1; padding: 15px; border-radius: 8px; margin-top: 20px; }
         .opt-title { font-weight: bold; color: #0277bd; display: flex; align-items: center; gap: 5px; font-size: 16px; margin-bottom: 5px; }
         
-        /* 教學方案與結構卡片樣式 */
         .plan-card { background: #f8fbff; border: 1px solid #b3e5fc; border-radius: 6px; padding: 12px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .plan-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e1f5fe; padding-bottom: 8px; margin-bottom: 8px; }
         .plan-title { font-weight: bold; color: #0277bd; font-size: 15px; }
@@ -42,7 +41,6 @@
         .struct-header { font-weight: bold; color: #f57f17; font-size: 14px; margin-bottom: 8px; border-bottom: 1px dashed #ffe082; padding-bottom: 4px;}
         .struct-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center;}
         
-        /* 標籤視覺設計 */
         .tag-formula { background: #ffcc80; color: #e65100; padding: 4px 8px; border-radius: 12px; font-size: 13px; font-weight: bold; border: 1px solid #ffa726; cursor: help;}
         .tag-single { background: #fff3e0; color: #ef6c00; padding: 4px 8px; border-radius: 12px; font-size: 13px; border: 1px solid #ffe0b2; cursor: help;}
         .tag-minus { background: #ffebee; color: #c62828; padding: 4px 8px; border-radius: 12px; font-size: 13px; font-weight: bold; border: 1px solid #ffcdd2; cursor: default; }
@@ -161,7 +159,7 @@
                         <div id="optimizedList"></div>
                     </div>
                     <div id="structurePlansArea" style="display:none;">
-                        <p style="font-size:13px; color:#e65100; margin-top:0;">導入經典中醫的「加減方」思維，允許從複方中扣除 1~5 味多餘藥材，展現最精簡的骨架與多種分歧思路。</p>
+                        <p style="font-size:13px; color:#e65100; margin-top:0;">導入經典中醫的「加減方」思維，允許從複方中扣除 1~5 味多餘藥材，展現最精簡的骨架與 5 種分歧思路。</p>
                         <div id="structuralList"></div>
                     </div>
                 </div>
@@ -369,13 +367,14 @@
             });
         }
 
+        // 💡 淨化顯示名稱 (拔除廠牌與劑型)
         function getCleanDisplayName(name) {
             return name.replace(/[\(（].*?[\)）]/g, '').replace(/濃縮|顆粒|細粒|微粒|膠囊|錠劑|散劑|丸劑|浸膏|液/g, '').trim();
         }
-
-        // 💡 新增：萃取純粹藥材字根的函數 (防呆：防止去生薑加乾薑、去白芍加芍藥)
+        
+        // 💡 萃取藥材核心字根 (用於防呆：防止去甘草加甘草)
         function getCoreHerbName(name) {
-            return name.replace(/炙|生|白|赤|乾|炮|製|藥|粉|炒|熟/g, '').trim();
+            return name.replace(/炙|生|白|赤|乾|炮|製|藥|粉|炒|熟|川|懷/g, '').replace(/[\(（].*?[\)）]/g, '').trim();
         }
 
         function calculateResult() {
@@ -637,7 +636,7 @@
             }
 
             // ==============================================
-            // 核心 2：方劑結構啟發 (加入加權懲罰與字根防呆鎖)
+            // 核心 2：方劑結構啟發 (💡 加入臨床優雅度加權 & 同質字根排斥鎖)
             // ==============================================
             let structuralPlans = [];
             
@@ -647,7 +646,7 @@
                 return { formula: f, surplus: surplus, matchCount: matchCount };
             }).filter(item => item.surplus.length <= 5 && item.matchCount >= 2); 
 
-            // 💡 修正 1：導入加權懲罰計分法，把那些需要大量減去藥材的「巨型大雜燴」踢出排行榜
+            // 💡 改進：優雅度加權排序 (命中數高、且扣除藥材少的最優先入選)
             unifiedCandidates.sort((a, b) => {
                 let scoreA = a.matchCount - (a.surplus.length * 1.5);
                 let scoreB = b.matchCount - (b.surplus.length * 1.5);
@@ -656,36 +655,37 @@
             
             let topCandidates = unifiedCandidates.slice(0, 60).map(item => item.formula); 
 
+            // 💡 檢查是否有「去某藥又加回同種藥」的愚蠢邏輯
+            function hasSillySwap(minusArray, missingArray) {
+                for (let m of minusArray) {
+                    let coreM = getCoreHerbName(m);
+                    for (let ah of missingArray) {
+                        let coreAh = getCoreHerbName(ah);
+                        if (coreM === coreAh || (coreM.length > 0 && coreAh.includes(coreM)) || (coreAh.length > 0 && coreM.includes(coreAh))) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+
             topCandidates.forEach(f1 => {
                 let combinedHerbs = new Set(f1.herbArray);
                 let surplus = [...combinedHerbs].filter(h => !targetHerbNames.includes(h));
                 let missing = targetHerbNames.filter(h => !combinedHerbs.has(h));
                 
-                // 💡 修正 2：啟動「字根防呆鎖」，拒絕去甘草加甘草的愚蠢操作
-                let hasSillySwap = false;
-                for (let m of surplus) {
-                    let coreM = getCoreHerbName(m);
-                    for (let ah of missing) {
-                        let coreAh = getCoreHerbName(ah);
-                        if (coreM === coreAh || (coreM.length > 0 && coreAh.includes(coreM)) || (coreAh.length > 0 && coreM.includes(coreAh))) {
-                            hasSillySwap = true; break;
-                        }
-                    }
-                    if (hasSillySwap) break;
-                }
-                if (hasSillySwap) return; // 終止這個沒有啟發性的方案
+                // 💡 防呆鎖生效：如果有愚蠢替換，直接銷毀此方案
+                if (hasSillySwap(surplus, missing)) return; 
 
                 if (surplus.length <= 5) {
                     let singlesToUse = [];
                     let missingSingles = []; 
-                    for(let h of targetHerbNames) {
-                        if(!combinedHerbs.has(h)) {
-                            let sh = getSingleHerbItem(h);
-                            if(!sh) { 
-                                missingSingles.push(h); 
-                            } else {
-                                singlesToUse.push(sh);
-                            }
+                    for(let h of missing) {
+                        let sh = getSingleHerbItem(h);
+                        if(!sh) { 
+                            missingSingles.push(h); 
+                        } else {
+                            singlesToUse.push(sh);
                         }
                     }
                     structuralPlans.push({
@@ -702,7 +702,7 @@
                 for(let j=i+1; j<topCandidates.length; j++) {
                     let f2 = topCandidates[j];
                     
-                    // 💡 修正 3：啟動「同名排斥鎖」，拒絕相同方劑疊加
+                    // 💡 防呆鎖生效：同名方劑絕對不疊加
                     if (getCleanDisplayName(f1.name) === getCleanDisplayName(f2.name)) continue;
 
                     let combinedHerbs = new Set(f1.herbArray);
@@ -711,30 +711,18 @@
                     let surplus = [...combinedHerbs].filter(h => !targetHerbNames.includes(h));
                     let missing = targetHerbNames.filter(h => !combinedHerbs.has(h));
                     
-                    let hasSillySwap = false;
-                    for (let m of surplus) {
-                        let coreM = getCoreHerbName(m);
-                        for (let ah of missing) {
-                            let coreAh = getCoreHerbName(ah);
-                            if (coreM === coreAh || (coreM.length > 0 && coreAh.includes(coreM)) || (coreAh.length > 0 && coreM.includes(coreAh))) {
-                                hasSillySwap = true; break;
-                            }
-                        }
-                        if (hasSillySwap) break;
-                    }
-                    if (hasSillySwap) continue;
+                    // 💡 防呆鎖生效：愚蠢替換銷毀
+                    if (hasSillySwap(surplus, missing)) continue;
 
                     if (surplus.length <= 5) {
                         let singlesToUse = [];
                         let missingSingles = [];
-                        for(let h of targetHerbNames) {
-                            if(!combinedHerbs.has(h)){
-                                let sh = getSingleHerbItem(h);
-                                if(!sh) { 
-                                    missingSingles.push(h); 
-                                } else {
-                                    singlesToUse.push(sh);
-                                }
+                        for(let h of missing) {
+                            let sh = getSingleHerbItem(h);
+                            if(!sh) { 
+                                missingSingles.push(h); 
+                            } else {
+                                singlesToUse.push(sh);
                             }
                         }
                         structuralPlans.push({
@@ -769,9 +757,13 @@
                 }
             }
 
+            // 💡 核心演算法：計算「臨床優雅度 (Elegance Cost)」，分數越低越好
             deduplicatedPlans.sort((a, b) => {
-                if(a.totalItems !== b.totalItems) return a.totalItems - b.totalItems;
-                return b.formulaHerbCount - a.formulaHerbCount;
+                let costA = (a.formulas.length > 1 ? 5 : 0) + (a.singles.length * 1) + (a.minusHerbs.length * 6) + (a.missingSingles.length * 20);
+                let costB = (b.formulas.length > 1 ? 5 : 0) + (b.singles.length * 1) + (b.minusHerbs.length * 6) + (b.missingSingles.length * 20);
+                
+                if (costA !== costB) return costA - costB;
+                return b.formulaHerbCount - a.formulaHerbCount; 
             });
 
             let finalDiversePlans = [];
@@ -834,7 +826,7 @@
                     
                     let headerText = plan.isSubtraction ? 
                         `啟發思路 ${index + 1}：經典加減法 (概念步驟：${plan.totalItems})` : 
-                        `啟發思路 ${index + 1}：極簡疊加骨架 (共 ${plan.totalItems} 品項)`;
+                        `啟發思路 ${index + 1}：疊加骨架 (共 ${plan.totalItems} 品項)`;
 
                     structList.innerHTML += `
                         <div class="struct-card">
