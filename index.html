@@ -31,7 +31,6 @@
         .opt-section { background: #fff; border: 2px dashed #0288d1; padding: 15px; border-radius: 8px; margin-top: 20px; }
         .opt-title { font-weight: bold; color: #0277bd; display: flex; align-items: center; gap: 5px; font-size: 16px; margin-bottom: 5px; }
         
-        /* 教學方案與結構卡片樣式 */
         .plan-card { background: #f8fbff; border: 1px solid #b3e5fc; border-radius: 6px; padding: 12px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .plan-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e1f5fe; padding-bottom: 8px; margin-bottom: 8px; }
         .plan-title { font-weight: bold; color: #0277bd; font-size: 15px; }
@@ -42,7 +41,6 @@
         .struct-header { font-weight: bold; color: #f57f17; font-size: 14px; margin-bottom: 8px; border-bottom: 1px dashed #ffe082; padding-bottom: 4px;}
         .struct-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center;}
         
-        /* 標籤視覺設計 */
         .tag-formula { background: #ffcc80; color: #e65100; padding: 4px 8px; border-radius: 12px; font-size: 13px; font-weight: bold; border: 1px solid #ffa726; cursor: help;}
         .tag-single { background: #fff3e0; color: #ef6c00; padding: 4px 8px; border-radius: 12px; font-size: 13px; border: 1px solid #ffe0b2; cursor: help;}
         .tag-minus { background: #ffebee; color: #c62828; padding: 4px 8px; border-radius: 12px; font-size: 13px; font-weight: bold; border: 1px solid #ffcdd2; cursor: default; }
@@ -161,7 +159,7 @@
                         <div id="optimizedList"></div>
                     </div>
                     <div id="structurePlansArea" style="display:none;">
-                        <p style="font-size:13px; color:#e65100; margin-top:0;">導入經典中醫的「加減方」思維，允許從複方中扣除 1~5 味多餘藥材，展現最精簡的骨架與 5 種分歧思路。</p>
+                        <p style="font-size:13px; color:#e65100; margin-top:0;">導入經典中醫的「加減方」思維，允許從複方中扣除 1~5 味多餘藥材，展現最精簡的骨架與多種分歧思路。</p>
                         <div id="structuralList"></div>
                     </div>
                 </div>
@@ -632,44 +630,55 @@
             }
 
             // ==============================================
-            // 核心 2：方劑結構啟發 (加減法，放寬至 5 味)
+            // 核心 2：方劑結構啟發 (💡 修正：加權計分與缺口容忍)
             // ==============================================
             let structuralPlans = [];
-            // 💡 調整篩選條件：放寬容許減去的剩餘藥材數量 <= 5
+            
+            // 1. 初步篩選出符合條件的候選複方 (命中 >=2 味，且多餘藥材 <= 5 味)
             let unifiedCandidates = formulas.map(f => {
                 let surplus = f.herbArray.filter(h => !targetHerbNames.includes(h));
                 let matchCount = f.herbArray.filter(h => targetHerbNames.includes(h)).length;
                 return { formula: f, surplus: surplus, matchCount: matchCount };
             }).filter(item => item.surplus.length <= 5 && item.matchCount >= 2); 
 
-            unifiedCandidates.sort((a, b) => b.matchCount - a.matchCount);
-            let topCandidates = unifiedCandidates.slice(0, 40).map(item => item.formula); 
+            // 💡 修正 1：導入加權計分法 (扣除多餘藥材的懲罰分數，讓漂亮骨架優先入選)
+            unifiedCandidates.sort((a, b) => {
+                let scoreA = a.matchCount - (a.surplus.length * 1.5);
+                let scoreB = b.matchCount - (b.surplus.length * 1.5);
+                return scoreB - scoreA;
+            });
+            
+            // 💡 擴大候選池以容納加減方可能性
+            let topCandidates = unifiedCandidates.slice(0, 60).map(item => item.formula); 
 
+            // 💡 演算法 2-1：單一核心複方推算
             topCandidates.forEach(f1 => {
                 let combinedHerbs = new Set(f1.herbArray);
                 let surplus = [...combinedHerbs].filter(h => !targetHerbNames.includes(h));
                 
                 if (surplus.length <= 5) {
-                    let valid = true;
                     let singlesToUse = [];
+                    let missingSingles = []; // 💡 修正 2：容忍沒有科中的單方 (如膠飴)
                     for(let h of targetHerbNames) {
                         if(!combinedHerbs.has(h)) {
                             let sh = getSingleHerbItem(h);
-                            if(!sh) { valid = false; break; } 
-                            singlesToUse.push(sh);
+                            if(!sh) { 
+                                missingSingles.push(h); 
+                            } else {
+                                singlesToUse.push(sh);
+                            }
                         }
                     }
-                    if(valid) {
-                        structuralPlans.push({
-                            formulas: [f1], singles: singlesToUse, minusHerbs: surplus,
-                            totalItems: 1 + surplus.length + singlesToUse.length, 
-                            formulaHerbCount: combinedHerbs.size - surplus.length,
-                            isSubtraction: surplus.length > 0
-                        });
-                    }
+                    structuralPlans.push({
+                        formulas: [f1], singles: singlesToUse, minusHerbs: surplus, missingSingles: missingSingles,
+                        totalItems: 1 + surplus.length + singlesToUse.length + missingSingles.length, 
+                        formulaHerbCount: combinedHerbs.size - surplus.length,
+                        isSubtraction: surplus.length > 0
+                    });
                 }
             });
 
+            // 💡 演算法 2-2：雙核心複方疊算
             for(let i=0; i<topCandidates.length; i++) {
                 let f1 = topCandidates[i];
                 for(let j=i+1; j<topCandidates.length; j++) {
@@ -680,23 +689,24 @@
                     let surplus = [...combinedHerbs].filter(h => !targetHerbNames.includes(h));
                     
                     if (surplus.length <= 5) {
-                        let valid = true;
                         let singlesToUse = [];
+                        let missingSingles = [];
                         for(let h of targetHerbNames) {
                             if(!combinedHerbs.has(h)){
                                 let sh = getSingleHerbItem(h);
-                                if(!sh) { valid = false; break; }
-                                singlesToUse.push(sh);
+                                if(!sh) { 
+                                    missingSingles.push(h); 
+                                } else {
+                                    singlesToUse.push(sh);
+                                }
                             }
                         }
-                        if(valid) {
-                            structuralPlans.push({
-                                formulas: [f1, f2], singles: singlesToUse, minusHerbs: surplus,
-                                totalItems: 2 + surplus.length + singlesToUse.length, 
-                                formulaHerbCount: combinedHerbs.size - surplus.length,
-                                isSubtraction: surplus.length > 0
-                            });
-                        }
+                        structuralPlans.push({
+                            formulas: [f1, f2], singles: singlesToUse, minusHerbs: surplus, missingSingles: missingSingles,
+                            totalItems: 2 + surplus.length + singlesToUse.length + missingSingles.length, 
+                            formulaHerbCount: combinedHerbs.size - surplus.length,
+                            isSubtraction: surplus.length > 0
+                        });
                     }
                 }
             }
@@ -705,7 +715,8 @@
                 let fSig = plan.formulas.map(f => f.herbArray.join(',')).sort().join(' + ');
                 let mSig = plan.minusHerbs.sort().join(',');
                 let sSig = plan.singles.map(s => s.herbArray[0]).sort().join(',');
-                return fSig + " | " + mSig + " | " + sSig;
+                let msSig = plan.missingSingles.sort().join(','); // 加入缺少的藥材作為簽名的一部分
+                return fSig + " | " + mSig + " | " + sSig + " | " + msSig;
             }
             
             function getPlanFormulaConcepts(plan) {
@@ -722,6 +733,7 @@
                 }
             }
 
+            // 排序：總步驟數越少越好，有效涵蓋藥材越多越好
             deduplicatedPlans.sort((a, b) => {
                 if(a.totalItems !== b.totalItems) return a.totalItems - b.totalItems;
                 return b.formulaHerbCount - a.formulaHerbCount;
@@ -759,19 +771,33 @@
             } else {
                 finalDiversePlans.forEach((plan, index) => {
                     let tagsHtml = '';
+                    
+                    // 1. 渲染核心複方
                     plan.formulas.forEach(f => {
                         tagsHtml += `<div class="tag-formula has-hover" onclick="toggleMobileCard(this)">📦 ${getCleanDisplayName(f.name)}${getHoverCardHTML(f)}</div>`;
                     });
+                    
+                    // 2. 渲染減去 (❌ 去) 的藥材
                     if (plan.minusHerbs.length > 0) {
                         tagsHtml += `<span style="color:#ccc; line-height:28px;">-</span>`;
                         plan.minusHerbs.forEach(mh => {
                             tagsHtml += `<div class="tag-minus">❌ 去 ${mh}</div>`;
                         });
                     }
+                    
+                    // 3. 渲染加入 (🌿 加) 的單方
                     if (plan.singles.length > 0) {
                         tagsHtml += `<span style="color:#ccc; line-height:28px;">+</span>`;
                         plan.singles.forEach(s => {
                             tagsHtml += `<div class="tag-single has-hover" onclick="toggleMobileCard(this)">🌿 ${getCleanDisplayName(s.name)}${getHoverCardHTML(s)}</div>`;
+                        });
+                    }
+
+                    // 4. 💡 渲染缺少 (⚠️ 缺) 的藥材 (容忍機制的視覺呈現)
+                    if (plan.missingSingles && plan.missingSingles.length > 0) {
+                        tagsHtml += `<span style="color:#ccc; line-height:28px;">+</span>`;
+                        plan.missingSingles.forEach(ms => {
+                            tagsHtml += `<div class="tag-single" style="background:#fff3cd; color:#856404; border-color:#ffeeba; cursor:not-allowed;">⚠️ 缺 ${ms}</div>`;
                         });
                     }
                     
