@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>科學中藥原藥材精準換算與教學平台</title>
+    <title>科學中藥原藥材精準換算與臨床教學平台</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         * { box-sizing: border-box; }
@@ -19,18 +19,22 @@
         
         .search-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
         .search-bar input { flex: 1; min-width: 200px; }
-        .search-bar select { flex: 0.5; min-width: 120px; }
         
+        /* 篩選器容器樣式 */
         .brand-filters-container { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 10px; margin-bottom: 15px; }
         .brand-filters-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 14px; font-weight: bold; flex-wrap: wrap; gap: 10px;}
         .brand-filters { display: flex; flex-wrap: wrap; gap: 10px; max-height: 120px; overflow-y: auto; font-size: 14px; }
         .brand-filters label { display: flex; align-items: center; cursor: pointer; background: #fff; padding: 6px 10px; border-radius: 20px; border: 1px solid #ddd; }
+        .brand-filters label:hover { background: #eef2f5; }
+        .brand-count { color: #888; font-size: 12px; margin-left: 4px; }
         
         .btn-small { padding: 4px 12px; font-size: 14px; cursor: pointer; background: #6c757d; color: white; border: none; border-radius: 4px; }
+        .btn-small:hover { background: #5a6268; }
 
         .opt-section { background: #fff; border: 2px dashed #0288d1; padding: 15px; border-radius: 8px; margin-top: 20px; }
         .opt-title { font-weight: bold; color: #0277bd; display: flex; align-items: center; gap: 5px; font-size: 16px; margin-bottom: 5px; }
         
+        /* 教學方案與結構卡片樣式 */
         .plan-card { background: #f8fbff; border: 1px solid #b3e5fc; border-radius: 6px; padding: 12px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .plan-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e1f5fe; padding-bottom: 8px; margin-bottom: 8px; }
         .plan-title { font-weight: bold; color: #0277bd; font-size: 15px; }
@@ -41,6 +45,7 @@
         .struct-header { font-weight: bold; color: #f57f17; font-size: 14px; margin-bottom: 8px; border-bottom: 1px dashed #ffe082; padding-bottom: 4px;}
         .struct-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center;}
         
+        /* 標籤視覺設計 */
         .tag-formula { background: #ffcc80; color: #e65100; padding: 4px 8px; border-radius: 12px; font-size: 13px; font-weight: bold; border: 1px solid #ffa726; cursor: help;}
         .tag-single { background: #fff3e0; color: #ef6c00; padding: 4px 8px; border-radius: 12px; font-size: 13px; border: 1px solid #ffe0b2; cursor: help;}
         .tag-minus { background: #ffebee; color: #c62828; padding: 4px 8px; border-radius: 12px; font-size: 13px; font-weight: bold; border: 1px solid #ffcdd2; cursor: default; }
@@ -117,16 +122,19 @@
                 <div class="brand-filters" id="brandCheckboxes"></div>
             </div>
 
+            <div class="brand-filters-container">
+                <div class="brand-filters-header">
+                    <span>💊 劑型篩選 (預設已勾選常用粉劑型態)</span>
+                    <div>
+                        <button class="btn-small" onclick="selectAllCategories(true)">全選</button>
+                        <button class="btn-small" onclick="selectAllCategories(false)">全不選</button>
+                    </div>
+                </div>
+                <div class="brand-filters" id="categoryCheckboxes"></div>
+            </div>
+
             <div class="search-bar">
-                <select id="categorySelect" onchange="filterDrugs()">
-                    <option value="all">所有劑型</option>
-                    <option value="濃縮散劑">濃縮散劑</option>
-                    <option value="濃縮顆粒劑">濃縮顆粒劑</option>
-                    <option value="濃縮細粒劑">濃縮細粒劑</option>
-                    <option value="散劑">散劑</option>
-                    <option value="丸劑">丸劑</option>
-                </select>
-                <input type="text" id="searchInput" placeholder="輸入藥名或許可證搜尋..." onkeyup="filterDrugs()">
+                <input type="text" id="searchInput" placeholder="輸入藥名、注音簡稱或許可證字號搜尋..." onkeyup="filterDrugs()">
             </div>
             
             <div style="max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; margin-bottom: 20px;">
@@ -140,9 +148,19 @@
                 <div class="opt-title">🎓 AI 處方本質分析與教學推薦</div>
                 <p style="font-size:12px; color:#666; margin:0 0 10px 0;">深入分析疊方背後的「原藥材本質」，提供嚴謹的劑量等效方案，以及引入「加減法」思維的多變結構啟發。</p>
                 
+                <div style="margin-bottom: 12px; background: #e3f2fd; padding: 10px; border-radius: 4px; border: 1px solid #bbdefb; display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+                    <label style="font-size:14px; color:#0d47a1; font-weight:bold; cursor:pointer;">
+                        🧠 AI 結構分析模式：
+                        <select id="analysisModeSelect" onchange="runEducationalAnalysis()" style="padding: 5px; font-size: 14px;">
+                            <option value="compact" selected>骨架精簡模式 (原比重加權，追求總品項最少)</option>
+                            <option value="elegant">臨床優雅模式 (新演算法，鼓勵經典疊方、重懲減藥)</option>
+                        </select>
+                    </label>
+                </div>
+
                 <div style="margin-bottom: 12px; background: #e8f5e9; padding: 8px; border-radius: 4px; border: 1px solid #c8e6c9;">
                     <label style="font-size:14px; color:#2e7d32; font-weight:bold; cursor:pointer; display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" id="veganModeToggle" style="width:18px; height:18px;">
+                        <input type="checkbox" id="veganModeToggle" style="width:18px; height:18px;" onchange="runEducationalAnalysis()">
                         🌱 純素友善模式 (AI 重新推演時，將強制排除含動物性成分之科中與方劑)
                     </label>
                 </div>
@@ -159,7 +177,7 @@
                         <div id="optimizedList"></div>
                     </div>
                     <div id="structurePlansArea" style="display:none;">
-                        <p style="font-size:13px; color:#e65100; margin-top:0;">導入經典中醫的「加減方」思維，允許從複方中扣除 1~5 味多餘藥材，展現最精簡的骨架與 5 種分歧思路。</p>
+                        <p style="font-size:13px; color:#e65100; margin-top:0;">導入經典中醫的「加減方」思維，展現最符合本質與視野分歧的思路 (固定輸出 5 組參考)。</p>
                         <div id="structuralList"></div>
                     </div>
                 </div>
@@ -176,7 +194,7 @@
 
     <script>
         // ==========================================
-        // ⚠️ 請在下方雙引號內，貼上您的 Google 試算表 CSV 網址 ⚠️
+        // ⚠️ 第 1 步：請在下方雙引號內，貼上您的 Google 試算表 CSV 網址 ⚠️
         // ==========================================
         const googleSheetCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5wPHCM9ybm9133NpX9HgFee9chFqvpvr9J2yQG8NVpzVBVeZvkOkkXI6vgva32xs8C_c2SbI5lObD/pub?output=csv";
 
@@ -257,15 +275,18 @@
                 download: true, header: true, skipEmptyLines: true,
                 complete: function(results) {
                     let brandCounts = {}; 
+                    let categoryCounts = {}; // 💡 新增：用於動態統計劑型種類
                     database = [];
                     results.data.forEach((row, index) => {
                         if (!row['顯示名稱']) return;
                         const brand = row['藥廠'] || '未知藥廠';
+                        const category = row['分類標籤'] || '未知劑型';
                         const ratio = parseFloat(row['濃縮倍數']) || 0;
                         
                         if(brand !== '其他藥廠' && brand !== '未知藥廠') {
                             brandCounts[brand] = (brandCounts[brand] || 0) + 1;
                         }
+                        categoryCounts[category] = (categoryCounts[category] || 0) + 1;
                         
                         const conc = parseHerbString(row['濃縮生藥組成']);
                         const raw = parseHerbString(row['原粉生藥組成']);
@@ -275,34 +296,55 @@
 
                         database.push({
                             id: index, license: row['許可證字號'] || '', brand: brand, name: row['顯示名稱'] || '',
-                            category: row['分類標籤'] || '', ratio: ratio,
+                            category: category, ratio: ratio,
                             isWarning: (row['解析狀態'] || '').includes('⚠️'),
                             concHerbs: conc.obj, concTotalWeight: conc.total, concDisplay: conc.displayStr,
                             rawHerbs: raw.obj, rawTotalWeight: raw.total, rawDisplay: raw.displayStr,
                             excObj: exc.obj, excTotalWeight: exc.total, excDisplay: exc.displayStr,
                             herbArray: herbArr, 
-                            uniqueHerbCount: herbArr.length
+                            uniqueHerbCount: herbArr.length,
+                            bopomofo: row['注音簡稱'] || ''
                         });
                     });
                     
                     populateBrandCheckboxes(brandCounts);
+                    populateCategoryCheckboxes(categoryCounts); // 💡 新增：生成劑型勾選框
                     statusMessage.style.backgroundColor = "#d4edda"; 
                     statusMessage.style.color = "#155724";
                     statusMessage.innerHTML = `✅ 成功連線。載入 <strong>${database.length}</strong> 筆精準純化資料。`;
-                    renderDrugs(database);
+                    filterDrugs(); // 💡 載入完畢後，直接套用預設過濾條件
                 }
             });
         }
 
         function populateBrandCheckboxes(counts) {
             const container = document.getElementById('brandCheckboxes');
+            container.innerHTML = '';
             Object.keys(counts).sort((a, b) => counts[b] - counts[a]).forEach(b => {
                 container.innerHTML += `<label><input type="checkbox" value="${b}" class="brand-cb" onchange="filterDrugs()" checked> ${b} <span class="brand-count">(${counts[b]})</span></label>`;
             });
         }
 
+        // 💡 新增修改：動態生成劑型勾選框，並預設勾選散劑、顆粒劑、細粒劑
+        function populateCategoryCheckboxes(counts) {
+            const container = document.getElementById('categoryCheckboxes');
+            container.innerHTML = '';
+            const defaultChecked = ['濃縮散劑', '濃縮顆粒劑', '濃縮細粒劑', '散劑'];
+            
+            Object.keys(counts).sort((a, b) => counts[b] - counts[a]).forEach(c => {
+                const isChecked = defaultChecked.includes(c) ? 'checked' : '';
+                container.innerHTML += `<label><input type="checkbox" value="${c}" class="category-cb" onchange="filterDrugs()" ${isChecked}> ${c} <span class="brand-count">(${counts[c]})</span></label>`;
+            });
+        }
+
         function selectAllBrands(isSel) {
             document.querySelectorAll('.brand-cb').forEach(cb => cb.checked = isSel); 
+            filterDrugs();
+        }
+
+        // 💡 新增修改：劑型全選/全不選
+        function selectAllCategories(isSel) {
+            document.querySelectorAll('.category-cb').forEach(cb => cb.checked = isSel); 
             filterDrugs();
         }
 
@@ -315,19 +357,29 @@
                 list.innerHTML += `
                     <li class="drug-item ${d.isWarning ? 'warning-bg' : ''}">
                         <div class="drug-info-wrapper has-hover" onclick="toggleMobileCard(this)">
-                            <span style="color:#888;font-size:12px;">[${d.brand}] ${tag}</span><br>
+                            <span style="color:#888;font-size:12px;">[${d.brand}] [${d.category}] ${tag}</span><br>
                             <span class="${d.isWarning?'warning-text':''}" style="font-size:16px;"><strong>${d.name}</strong></span>
                             ${getHoverCardHTML(d)}
                         </div>
                         <button class="add-btn" onclick="addToPrescription(${d.id})">加入</button>
                     </li>`;
             });
+            if (drugs.length > 100) {
+                list.innerHTML += `<li class="drug-item" style="color:#888; justify-content:center;">...還有 ${drugs.length - 100} 筆，請縮小搜尋範圍。</li>`;
+            }
         }
 
+        // 💡 新增修改：搜尋篩選器同時連動廠牌與多選劑型
         function filterDrugs() {
             const kw = document.getElementById('searchInput').value.trim().toLowerCase();
-            const checked = Array.from(document.querySelectorAll('.brand-cb:checked')).map(cb => cb.value);
-            renderDrugs(database.filter(d => checked.includes(d.brand) && (d.name.toLowerCase().includes(kw) || d.license.toLowerCase().includes(kw))));
+            const checkedBrands = Array.from(document.querySelectorAll('.brand-cb:checked')).map(cb => cb.value);
+            const checkedCategories = Array.from(document.querySelectorAll('.category-cb:checked')).map(cb => cb.value);
+            
+            renderDrugs(database.filter(d => 
+                checkedBrands.includes(d.brand) && 
+                checkedCategories.includes(d.category) && 
+                (d.name.toLowerCase().includes(kw) || d.license.toLowerCase().includes(kw) || d.bopomofo.toLowerCase().includes(kw))
+            ));
         }
 
         function addToPrescription(id) {
@@ -354,7 +406,7 @@
                 list.innerHTML += `
                     <div class="presc-item">
                         <div class="presc-item-info has-hover" onclick="toggleMobileCard(this)">
-                            <span style="font-size:15px; color:#666;">[${p.brand}]</span><br>
+                            <span style="font-size:15px; color:#666;">[${p.brand}] [${p.category}]</span><br>
                             <span><strong>${p.name}</strong></span>
                             ${getHoverCardHTML(p)}
                         </div>
@@ -367,12 +419,6 @@
             });
         }
 
-        // 💡 淨化顯示名稱 (拔除廠牌與劑型)
-        function getCleanDisplayName(name) {
-            return name.replace(/[\(（].*?[\)）]/g, '').replace(/濃縮|顆粒|細粒|微粒|膠囊|錠劑|散劑|丸劑|浸膏|液/g, '').trim();
-        }
-        
-        // 💡 萃取藥材核心字根 (用於防呆：防止去甘草加甘草)
         function getCoreHerbName(name) {
             return name.replace(/炙|生|白|赤|乾|炮|製|藥|粉|炒|熟|川|懷/g, '').replace(/[\(（].*?[\)）]/g, '').trim();
         }
@@ -430,34 +476,6 @@
             document.getElementById('totalWeightDisplay').innerText = `總生藥重量: ${grandRaw.toFixed(2)} g`;
         }
 
-        function getHerbCoefficient(item, herbName) {
-            let fw = (item.concTotalWeight / (item.ratio || 1)) + item.rawTotalWeight + item.excTotalWeight;
-            if(fw <= 0) fw = 0.0001;
-            let coef = 0;
-            if (item.concHerbs && item.concHerbs[herbName]) {
-                coef += ((item.concHerbs[herbName] / (item.concTotalWeight||0.0001)) * (item.concTotalWeight/item.ratio) / fw) * item.ratio;
-            }
-            if (item.rawHerbs && item.rawHerbs[herbName]) {
-                coef += (item.rawHerbs[herbName] / fw) * 1.0;
-            }
-            return coef;
-        }
-
-        function switchTab(tabName) {
-            document.getElementById('tabStrict').classList.remove('active');
-            document.getElementById('tabStructure').classList.remove('active');
-            document.getElementById('strictPlansArea').style.display = 'none';
-            document.getElementById('structurePlansArea').style.display = 'none';
-
-            if(tabName === 'strict') {
-                document.getElementById('tabStrict').classList.add('active');
-                document.getElementById('strictPlansArea').style.display = 'block';
-            } else {
-                document.getElementById('tabStructure').classList.add('active');
-                document.getElementById('structurePlansArea').style.display = 'block';
-            }
-        }
-
         function runEducationalAnalysis() {
             if (prescription.filter(p => p.dose > 0).length === 0) {
                 alert("⚠️ 請先輸入處方劑量！"); return;
@@ -483,10 +501,13 @@
                 }
             }
 
+            // 💡 新增修改：AI 引擎同時遵循「勾選的藥廠」與「勾選的劑型」
             const checkedBrands = Array.from(document.querySelectorAll('.brand-cb:checked')).map(cb => cb.value);
+            const checkedCategories = Array.from(document.querySelectorAll('.category-cb:checked')).map(cb => cb.value);
             
             let validDB = database.filter(item => {
                 if (!checkedBrands.includes(item.brand) || item.isWarning || item.ratio <= 0) return false;
+                if (!checkedCategories.includes(item.category)) return false; // 強制排除未勾選的劑型
                 if (isVeganMode && item.herbArray.some(h => isAnimalHerb(h))) return false;
                 return true;
             });
@@ -591,7 +612,6 @@
                 }
             }
 
-            let pureSinglePlan = generatedTeachingPlans.find(p => p.isPureSingle);
             if (pureSinglePlan) finalDisplayPlans.push(pureSinglePlan);
 
             const optList = document.getElementById('optimizedList');
@@ -604,9 +624,9 @@
                 }
                 let failDiagnostic = `❌ 找不到能夠完全對應原藥材的等效方案。<br><br>`;
                 if (unsupportHerbs.length > 0) {
-                    failDiagnostic += `💡 <strong>診斷原因：</strong>目前處方包含無單味科中支援的成分：<span style="color:#d32f2f; font-weight:bold;">${unsupportHerbs.join(', ')}</span>。導致等效劑量矩陣無法閉合。請嘗試切換至「結構啟發」面板觀看骨架建議！`;
+                    failDiagnostic += `💡 <strong>診斷原因：</strong>目前處方包含無單味科中支援的成分：<span style="color:#d32f2f; font-weight:bold;">${unsupportHerbs.join(', ')}</span>。請嘗試切換至「結構啟發」面板觀看骨架建議！`;
                 } else {
-                    failDiagnostic += `💡 <strong>診斷原因：</strong>勾選的廠牌進貨限制過窄或開啟了純素模式，現有庫存無法覆蓋當前開立的所有生藥種類。`;
+                    failDiagnostic += `💡 <strong>診斷原因：</strong>勾選的廠牌與劑型限制過窄或開啟了純素模式，現有庫存無法覆蓋生藥種類。`;
                 }
                 optList.innerHTML = `<p style="color:#d32f2f; line-height:1.6; font-size:14px;">${failDiagnostic}</p>`;
             } else {
@@ -636,26 +656,18 @@
             }
 
             // ==============================================
-            // 核心 2：方劑結構啟發 (💡 加入臨床優雅度加權 & 同質字根排斥鎖)
+            // 核心 2：方劑結構啟發 (💡 導入雙模式自主切換)
             // ==============================================
             let structuralPlans = [];
-            
             let unifiedCandidates = formulas.map(f => {
                 let surplus = f.herbArray.filter(h => !targetHerbNames.includes(h));
                 let matchCount = f.herbArray.filter(h => targetHerbNames.includes(h)).length;
                 return { formula: f, surplus: surplus, matchCount: matchCount };
             }).filter(item => item.surplus.length <= 5 && item.matchCount >= 2); 
 
-            // 💡 改進：優雅度加權排序 (命中數高、且扣除藥材少的最優先入選)
-            unifiedCandidates.sort((a, b) => {
-                let scoreA = a.matchCount - (a.surplus.length * 1.5);
-                let scoreB = b.matchCount - (b.surplus.length * 1.5);
-                return scoreB - scoreA;
-            });
-            
-            let topCandidates = unifiedCandidates.slice(0, 60).map(item => item.formula); 
+            unifiedCandidates.sort((a, b) => b.matchCount - a.matchCount);
+            let topCandidates = unifiedCandidates.slice(0, 40).map(item => item.formula); 
 
-            // 💡 檢查是否有「去某藥又加回同種藥」的愚蠢邏輯
             function hasSillySwap(minusArray, missingArray) {
                 for (let m of minusArray) {
                     let coreM = getCoreHerbName(m);
@@ -674,7 +686,6 @@
                 let surplus = [...combinedHerbs].filter(h => !targetHerbNames.includes(h));
                 let missing = targetHerbNames.filter(h => !combinedHerbs.has(h));
                 
-                // 💡 防呆鎖生效：如果有愚蠢替換，直接銷毀此方案
                 if (hasSillySwap(surplus, missing)) return; 
 
                 if (surplus.length <= 5) {
@@ -682,11 +693,7 @@
                     let missingSingles = []; 
                     for(let h of missing) {
                         let sh = getSingleHerbItem(h);
-                        if(!sh) { 
-                            missingSingles.push(h); 
-                        } else {
-                            singlesToUse.push(sh);
-                        }
+                        if(!sh) { missingSingles.push(h); } else { singlesToUse.push(sh); }
                     }
                     structuralPlans.push({
                         formulas: [f1], singles: singlesToUse, minusHerbs: surplus, missingSingles: missingSingles,
@@ -701,8 +708,6 @@
                 let f1 = topCandidates[i];
                 for(let j=i+1; j<topCandidates.length; j++) {
                     let f2 = topCandidates[j];
-                    
-                    // 💡 防呆鎖生效：同名方劑絕對不疊加
                     if (getCleanDisplayName(f1.name) === getCleanDisplayName(f2.name)) continue;
 
                     let combinedHerbs = new Set(f1.herbArray);
@@ -711,7 +716,6 @@
                     let surplus = [...combinedHerbs].filter(h => !targetHerbNames.includes(h));
                     let missing = targetHerbNames.filter(h => !combinedHerbs.has(h));
                     
-                    // 💡 防呆鎖生效：愚蠢替換銷毀
                     if (hasSillySwap(surplus, missing)) continue;
 
                     if (surplus.length <= 5) {
@@ -719,11 +723,7 @@
                         let missingSingles = [];
                         for(let h of missing) {
                             let sh = getSingleHerbItem(h);
-                            if(!sh) { 
-                                missingSingles.push(h); 
-                            } else {
-                                singlesToUse.push(sh);
-                            }
+                            if(!sh) { missingSingles.push(h); } else { singlesToUse.push(sh); }
                         }
                         structuralPlans.push({
                             formulas: [f1, f2], singles: singlesToUse, minusHerbs: surplus, missingSingles: missingSingles,
@@ -757,14 +757,23 @@
                 }
             }
 
-            // 💡 核心演算法：計算「臨床優雅度 (Elegance Cost)」，分數越低越好
-            deduplicatedPlans.sort((a, b) => {
-                let costA = (a.formulas.length > 1 ? 5 : 0) + (a.singles.length * 1) + (a.minusHerbs.length * 6) + (a.missingSingles.length * 20);
-                let costB = (b.formulas.length > 1 ? 5 : 0) + (b.singles.length * 1) + (b.minusHerbs.length * 6) + (b.missingSingles.length * 20);
-                
-                if (costA !== costB) return costA - costB;
-                return b.formulaHerbCount - a.formulaHerbCount; 
-            });
+            // 💡 新增修改：根據選單模式，執行完全不同的權重排序演算法
+            const currentMode = document.getElementById('analysisModeSelect').value;
+            if (currentMode === 'compact') {
+                // 模式 A：原比重加權模式 (追求品項、步驟最少優先)
+                deduplicatedPlans.sort((a, b) => {
+                    if(a.totalItems !== b.totalItems) return a.totalItems - b.totalItems;
+                    return b.formulaHerbCount - a.formulaHerbCount; 
+                });
+            } else {
+                // 模式 B：臨床優雅度加權模式 (重懲「去藥」、鼓勵「疊方加單方骨架」)
+                deduplicatedPlans.sort((a, b) => {
+                    let costA = (a.formulas.length > 1 ? 5 : 0) + (a.singles.length * 1) + (a.minusHerbs.length * 6) + (a.missingSingles.length * 20);
+                    let costB = (b.formulas.length > 1 ? 5 : 0) + (b.singles.length * 1) + (b.minusHerbs.length * 6) + (b.missingSingles.length * 20);
+                    if (costA !== costB) return costA - costB;
+                    return b.formulaHerbCount - a.formulaHerbCount; 
+                });
+            }
 
             let finalDiversePlans = [];
             let usedFormulaConcepts = new Set();
@@ -825,8 +834,8 @@
                     }
                     
                     let headerText = plan.isSubtraction ? 
-                        `啟發思路 ${index + 1}：經典加減法 (概念步驟：${plan.totalItems})` : 
-                        `啟發思路 ${index + 1}：疊加骨架 (共 ${plan.totalItems} 品項)`;
+                        `啟發思路 ${index + 1}：經典加減法` : 
+                        `啟發思路 ${index + 1}：精簡疊加骨架`;
 
                     structList.innerHTML += `
                         <div class="struct-card">
@@ -837,7 +846,7 @@
             }
 
             document.getElementById('analysisResultArea').style.display = 'block';
-            switchTab('structure'); 
+            switchTab('strict'); 
         }
 
         function applyPlan(index) {
