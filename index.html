@@ -3,13 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>科學中藥原藥材精準換算與臨床教學平台</title>
+    
+    <title>科學中藥原藥材換算平台(測試版)</title>
+    <meta name="description" content="專為中醫師與調劑人員打造的「科學中藥原藥材換算平台」。支援各廠牌科中精準換算、同物異名合併、毒劇藥安全把關，並內建方劑加減教學推薦系統，提升臨床開藥精準度。">
+    <meta name="keywords" content="科學中藥,科中換算,原藥材換算,中藥劑量計算,科中單複方,科學中藥賦形劑,中醫教學,方劑加減,小巴中醫,中醫師輔助工具,處方優化">
+    <meta name="author" content="小巴親子中醫">
+    
+    <meta property="og:title" content="科學中藥原藥材換算平台(測試版)">
+    <meta property="og:description" content="支援各廠牌科中劑量精準換算、毒劇藥把關與方劑結構重組推薦，臨床開藥輔助利器。">
+    <meta property="og:type" content="website">
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0WMG9NCPX5"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-0WMG9NCPX5');
+    </script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         * { box-sizing: border-box; }
-        body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; display: flex; flex-direction: column; min-height: 100vh;}
         .header { text-align: center; margin-bottom: 20px; color: #2c3e50; }
         
+        .main-content { flex: 1; }
         .container { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; align-items: flex-start; }
         .column { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .left-col { flex: 1.2; }
@@ -24,8 +42,16 @@
         .brand-filters-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 14px; font-weight: bold; flex-wrap: wrap; gap: 10px;}
         .brand-filters { display: flex; flex-wrap: wrap; gap: 10px; max-height: 120px; overflow-y: auto; font-size: 14px; }
         .brand-filters label { display: flex; align-items: center; cursor: pointer; background: #fff; padding: 6px 10px; border-radius: 20px; border: 1px solid #ddd; }
+        .brand-filters label:hover { background: #eef2f5; }
         .brand-count { color: #888; font-size: 12px; margin-left: 4px; }
         
+        .category-wiki { margin-top: 10px; background: #e3f2fd; border: 1px solid #bbdefb; border-radius: 6px; font-size: 13px; }
+        .category-wiki summary { padding: 10px; font-weight: bold; color: #0277bd; cursor: pointer; user-select: none; outline: none; }
+        .category-wiki summary:hover { background: #bbdefb; border-radius: 6px; }
+        .wiki-content { padding: 0 15px 15px 15px; color: #444; line-height: 1.6; }
+        .wiki-content h4 { color: #01579b; margin: 10px 0 5px 0; border-bottom: 1px dashed #bbdefb; padding-bottom: 4px;}
+        .wiki-content p { margin: 4px 0; }
+
         .btn-small { padding: 4px 12px; font-size: 14px; cursor: pointer; background: #6c757d; color: white; border: none; border-radius: 4px; }
         .btn-small:hover { background: #5a6268; }
 
@@ -86,112 +112,154 @@
         .tab-btn { flex: 1; padding: 10px; text-align: center; cursor: pointer; font-weight: bold; color: #666; background: #f8f9fa; border: none; outline: none;}
         .tab-btn.active { color: #0277bd; border-bottom: 3px solid #0277bd; background: #fff; }
 
+        .platform-footer { margin-top: 40px; padding: 30px 20px; background-color: #2c3e50; color: #ecf0f1; text-align: center; font-size: 14px; border-top: 4px solid #0288d1;}
+        .platform-footer a { color: #81d4fa; text-decoration: none; transition: 0.3s; }
+        .platform-footer a:hover { color: #fff; text-decoration: underline; }
+        .footer-links { margin: 15px 0; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+        .footer-link-btn { background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); }
+        .footer-link-btn:hover { background: rgba(255,255,255,0.2); }
+
         @media (max-width: 768px) {
             .container { flex-direction: column; gap: 15px; }
             .column { width: 100%; padding: 15px; }
             .right-col { position: relative; top: 0; } 
-            .search-bar { flex-direction: column; }
             .search-bar input { width: 100%; }
         }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>科學中藥原藥材精準換算與臨床教學平台</h1>
-        <p>支援同物異名合併、毒劇藥與動物藥把關、教學加減方重組</p>
+    <div class="main-content">
+        <div class="header">
+            <h1>科學中藥原藥材換算平台(測試版)</h1>
+            <p>支援同物異名合併、毒劇藥與動物藥把關、教學加減方重組</p>
+        </div>
+
+        <div id="statusMessage">正在從 Google 雲端載入最新中藥資料庫，請稍候...</div>
+
+        <div class="container">
+            <div class="column left-col">
+                <h3>🔍 搜尋與開立處方</h3>
+                
+                <div class="brand-filters-container">
+                    <div class="brand-filters-header">
+                        <span>🏢 廠牌篩選 (勾選您診所進貨的藥廠)</span>
+                        <div>
+                            <button class="btn-small" onclick="selectAllBrands(true)">全選</button>
+                            <button class="btn-small" onclick="selectAllBrands(false)">全不選</button>
+                        </div>
+                    </div>
+                    <div class="brand-filters" id="brandCheckboxes"></div>
+                </div>
+
+                <div class="brand-filters-container">
+                    <div class="brand-filters-header">
+                        <span>💊 劑型篩選 (預設已勾選常用粉劑型態)</span>
+                        <div>
+                            <button class="btn-small" onclick="selectAllCategories(true)">全選</button>
+                            <button class="btn-small" onclick="selectAllCategories(false)">全不選</button>
+                        </div>
+                    </div>
+                    <div class="brand-filters" id="categoryCheckboxes"></div>
+                    
+                    <details class="category-wiki">
+                        <summary>💡 不清楚劑型的差異？點此查看「中藥劑型小百科」</summary>
+                        <div class="wiki-content">
+                            <h4>1. 散劑 (Powder)</h4>
+                            <p><strong>製作定義：</strong>將一種或多種中藥原藥材經過乾燥、直接粉碎，並混合均勻所製成的粉末狀製劑。</p>
+                            <p><strong>特性：</strong>這是最傳統的劑型，沒有經過水煎煮與萃取的過程，保留了藥材所有的實體成分。通常用於貴重藥材（如人參、珍珠）、芳香類容易揮發的藥材（如冰片、蘇合香），或是難以溶於水的礦物類藥材。</p>
+                            
+                            <h4>2. 濃縮散劑 (Concentrated Powder)</h4>
+                            <p><strong>製作定義：</strong>將中藥材加水（或適當溶媒）依標準比例煎煮萃取後，取其藥湯濃縮成浸膏，接著加入法定的「賦形劑」（如澱粉、乳糖，或是原方藥材的細粉）進行乾燥、粉碎與均勻混合，製成粉末狀。</p>
+                            <p><strong>特性：</strong>屬於現代俗稱的「科學中藥」。因為經過萃取與濃縮，去除了藥渣，藥效成分較為集中，患者每次服用的體積與重量會比傳統散劑少。直接以溫水送服即可，免去自行煎藥的麻煩。</p>
+
+                            <h4>3. 濃縮顆粒劑 (Concentrated Granules)</h4>
+                            <p><strong>製作定義：</strong>前段製程與「濃縮散劑」完全相同（煎煮、萃取、濃縮）。但在加入賦形劑乾燥後，會多一道「造粒 (Granulation)」的程序，透過機器將粉末壓製或噴霧結合成具有一定大小的均勻顆粒。</p>
+                            <p><strong>特性：</strong>因為是顆粒狀，流動性比粉末（散劑）好，倒出時不容易飛散（較無粉塵）。此外，顆粒劑的表面積與孔隙率經過設計，吸水性好，服用時不容易卡在喉嚨嗆到，也更容易在溫水中溶解。</p>
+
+                            <h4>4. 濃縮細粒劑 (Concentrated Fine Granules)</h4>
+                            <p><strong>製作定義：</strong>製程與「濃縮顆粒劑」相同，差別在於造粒時，透過篩網（Mesh）的控制，將成品的顆粒直徑大小（粒度）控制在一個比顆粒劑更小、但比散劑略大的特定範圍內。</p>
+                            <p><strong>特性：</strong>介於散劑與顆粒劑之間，是目前台灣許多大型中藥廠（如順天堂、莊松榮等）最常採用的科學中藥劑型。它兼具了散劑「容易快速溶解、好吸收」以及顆粒劑「流動性佳、不易飛散嗆喉」的雙重優點。</p>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="輸入藥名、注音簡稱或許可證字號搜尋..." onkeyup="filterDrugs()">
+                </div>
+                
+                <div style="max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; margin-bottom: 20px;">
+                    <ul class="drug-list" id="drugList"></ul>
+                </div>
+
+                <h3>📝 目前處方 (點擊輸入一日克數)</h3>
+                <div id="prescriptionList"></div>
+
+                <div class="opt-section">
+                    <div class="opt-title">🎓 AI 處方本質分析與教學推薦</div>
+                    <p style="font-size:12px; color:#666; margin:0 0 10px 0;">深入分析疊方背後的「原藥材本質」，提供嚴謹的劑量等效方案，以及引入「加減法」思維的多變結構啟發。</p>
+                    
+                    <div style="margin-bottom: 12px; background: #e3f2fd; padding: 10px; border-radius: 4px; border: 1px solid #bbdefb; display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+                        <label style="font-size:14px; color:#0d47a1; font-weight:bold; cursor:pointer;">
+                            🧠 AI 結構分析模式：
+                            <select id="analysisModeSelect" onchange="switchTab('structure'); runEducationalAnalysis();" style="padding: 5px; font-size: 14px;">
+                                <option value="compact" selected>骨架精簡模式 (原比重加權，追求總品項最少)</option>
+                                <option value="elegant">臨床優雅模式 (新演算法，鼓勵經典疊方、重懲減藥)</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <div style="margin-bottom: 12px; background: #e8f5e9; padding: 8px; border-radius: 4px; border: 1px solid #c8e6c9;">
+                        <label style="font-size:14px; color:#2e7d32; font-weight:bold; cursor:pointer; display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="veganModeToggle" style="width:18px; height:18px;" onchange="runEducationalAnalysis()">
+                            🌱 純素友善模式 (AI 重新推演時，將強制排除含動物性成分之科中與方劑)
+                        </label>
+                    </div>
+
+                    <button class="add-btn" style="background-color:#0288d1; width:100%; font-size:16px;" onclick="runEducationalAnalysis()">🧠 啟動臨床處方深度分析</button>
+                    
+                    <div id="analysisResultArea" style="display:none; margin-top:15px; border-top:1px solid #b3e5fc; padding-top:15px;">
+                        <div class="tab-container">
+                            <button class="tab-btn active" id="tabStrict" onclick="switchTab('strict')">⚖️ 嚴謹劑量等效方案</button>
+                            <button class="tab-btn" id="tabStructure" onclick="switchTab('structure')">🧭 結構方義啟發 (加減法)</button>
+                        </div>
+                        <div id="strictPlansArea">
+                            <p style="font-size:13px; color:#01579b; margin-top:0;">尋找完全對應原藥材「克數誤差極小」的替代方案。</p>
+                            <div id="optimizedList"></div>
+                        </div>
+                        <div id="structurePlansArea" style="display:none;">
+                            <p style="font-size:13px; color:#e65100; margin-top:0;">導入經典中醫的「加減方」思維，展現最符合本質與視野分歧的思路 (固定輸出 5 組參考)。</p>
+                            <div id="structuralList"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="column right-col">
+                <h3>📊 原藥材換算結果</h3>
+                <p style="font-size: 13px; color: #666;">此為您開立處方的「原藥材本質」。教學引擎將以此為目標進行重新建構。</p>
+                <ul class="result-list" id="resultList"></ul>
+                <div class="total-weight" id="totalWeightDisplay" style="border-top: 2px solid #333; padding-top:10px;">總生藥重量: 0.00 g</div>
+            </div>
+        </div>
     </div>
 
-    <div id="statusMessage">正在從 Google 雲端載入最新中藥資料庫，請稍候...</div>
-
-    <div class="container">
-        <div class="column left-col">
-            <h3>🔍 搜尋與開立處方</h3>
-            
-            <div class="brand-filters-container">
-                <div class="brand-filters-header">
-                    <span>🏢 廠牌篩選 (勾選您診所進貨的藥廠)</span>
-                    <div>
-                        <button class="btn-small" onclick="selectAllBrands(true)">全選</button>
-                        <button class="btn-small" onclick="selectAllBrands(false)">全不選</button>
-                    </div>
-                </div>
-                <div class="brand-filters" id="brandCheckboxes"></div>
-            </div>
-
-            <div class="brand-filters-container">
-                <div class="brand-filters-header">
-                    <span>💊 劑型篩選 (預設已勾選常用粉劑型態)</span>
-                    <div>
-                        <button class="btn-small" onclick="selectAllCategories(true)">全選</button>
-                        <button class="btn-small" onclick="selectAllCategories(false)">全不選</button>
-                    </div>
-                </div>
-                <div class="brand-filters" id="categoryCheckboxes"></div>
-            </div>
-
-            <div class="search-bar">
-                <input type="text" id="searchInput" placeholder="輸入藥名、注音簡稱或許可證字號搜尋..." onkeyup="filterDrugs()">
-            </div>
-            
-            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; margin-bottom: 20px;">
-                <ul class="drug-list" id="drugList"></ul>
-            </div>
-
-            <h3>📝 目前處方 (點擊輸入一日克數)</h3>
-            <div id="prescriptionList"></div>
-
-            <div class="opt-section">
-                <div class="opt-title">🎓 AI 處方本質分析與教學推薦</div>
-                <p style="font-size:12px; color:#666; margin:0 0 10px 0;">深入分析疊方背後的「原藥材本質」，提供嚴謹的劑量等效方案，以及引入「加減法」思維的多變結構啟發。</p>
-                
-                <div style="margin-bottom: 12px; background: #e3f2fd; padding: 10px; border-radius: 4px; border: 1px solid #bbdefb; display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
-                    <label style="font-size:14px; color:#0d47a1; font-weight:bold; cursor:pointer;">
-                        🧠 AI 結構分析模式：
-                        <select id="analysisModeSelect" onchange="switchTab('structure'); runEducationalAnalysis();" style="padding: 5px; font-size: 14px;">
-                            <option value="compact" selected>骨架精簡模式 (原比重加權，追求總品項最少)</option>
-                            <option value="elegant">臨床優雅模式 (新演算法，鼓勵經典疊方、重懲減藥)</option>
-                        </select>
-                    </label>
-                </div>
-
-                <div style="margin-bottom: 12px; background: #e8f5e9; padding: 8px; border-radius: 4px; border: 1px solid #c8e6c9;">
-                    <label style="font-size:14px; color:#2e7d32; font-weight:bold; cursor:pointer; display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" id="veganModeToggle" style="width:18px; height:18px;" onchange="runEducationalAnalysis()">
-                        🌱 純素友善模式 (AI 重新推演時，將強制排除含動物性成分之科中與方劑)
-                    </label>
-                </div>
-
-                <button class="add-btn" style="background-color:#0288d1; width:100%; font-size:16px;" onclick="runEducationalAnalysis()">🧠 啟動臨床處方深度分析</button>
-                
-                <div id="analysisResultArea" style="display:none; margin-top:15px; border-top:1px solid #b3e5fc; padding-top:15px;">
-                    <div class="tab-container">
-                        <button class="tab-btn active" id="tabStrict" onclick="switchTab('strict')">⚖️ 嚴謹劑量等效方案</button>
-                        <button class="tab-btn" id="tabStructure" onclick="switchTab('structure')">🧭 結構方義啟發 (加減法)</button>
-                    </div>
-                    <div id="strictPlansArea">
-                        <p style="font-size:13px; color:#01579b; margin-top:0;">尋找完全對應原藥材「克數誤差極小」的替代方案。</p>
-                        <div id="optimizedList"></div>
-                    </div>
-                    <div id="structurePlansArea" style="display:none;">
-                        <p style="font-size:13px; color:#e65100; margin-top:0;">導入經典中醫的「加減方」思維，展現最符合本質與視野分歧的思路 (固定輸出 5 組參考)。</p>
-                        <div id="structuralList"></div>
-                    </div>
-                </div>
-            </div>
+    <div class="platform-footer">
+        <p style="margin: 0 0 10px 0; font-size: 16px;"><strong>科學中藥原藥材精準換算與臨床教學平台</strong></p>
+        <p style="margin: 5px 0;"><strong>底層資料來源：</strong><a href="https://service.mohw.gov.tw/DOCMAP/CusSite/TCMLQueryForm.aspx" target="_blank">衛福部中藥藥品許可證查詢系統</a></p>
+        <p style="margin: 5px 0;"><strong>系統開發與醫學架構：</strong>小巴親子中醫團隊</p>
+        
+        <div class="footer-links">
+            <a href="https://drsmall8.com/" target="_blank" class="footer-link-btn">🌐 官方網站</a>
+            <a href="https://www.facebook.com/DrSmall8" target="_blank" class="footer-link-btn">📘 Facebook 粉絲專頁</a>
+            <a href="https://www.linkedin.com/in/drsmall8" target="_blank" class="footer-link-btn">💼 LinkedIn</a>
         </div>
-
-        <div class="column right-col">
-            <h3>📊 原藥材換算結果</h3>
-            <p style="font-size: 13px; color: #666;">此為您開立處方的「原藥材本質」。教學引擎將以此為目標進行重新建構。</p>
-            <ul class="result-list" id="resultList"></ul>
-            <div class="total-weight" id="totalWeightDisplay" style="border-top: 2px solid #333; padding-top:10px;">總生藥重量: 0.00 g</div>
-        </div>
+        <p style="font-size: 12px; color: #7f8c8d; margin-top: 15px;">&copy; 2026 小巴親子中醫 (Dr. Small8). All rights reserved.</p>
     </div>
 
     <script>
         // ==========================================
-        // ⚠️ 請在下方雙引號內，貼上您的 Google 試算表 CSV 網址 ⚠️
+        // ⚠️ 第 1 步：請在下方雙引號內，貼上您的 Google 試算表 CSV 網址 ⚠️
         // ==========================================
         const googleSheetCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5wPHCM9ybm9133NpX9HgFee9chFqvpvr9J2yQG8NVpzVBVeZvkOkkXI6vgva32xs8C_c2SbI5lObD/pub?output=csv";
 
@@ -415,7 +483,6 @@
             return name.replace(/[\(（].*?[\)）]/g, '').replace(/濃縮|顆粒|細粒|微粒|膠囊|錠劑|散劑|丸劑|浸膏|液/g, '').trim();
         }
         
-        // 💡 萃取藥材核心字根 (防呆：防止去甘草加甘草)
         function getCoreHerbName(name) {
             return name.replace(/炙|生|白|赤|乾|炮|製|藥|粉|炒|熟|川|懷/g, '').replace(/[\(（].*?[\)）]/g, '').trim();
         }
@@ -611,7 +678,7 @@
 
                 let titleWithWarning = `正統方義：以【${getCleanDisplayName(formula.name)}】為主軸`;
                 if (strictMissingSingles.length > 0) {
-                    titleWithWarning += ` <span style="color:#e65100; font-size:11px;">⚠️ 殘缺口: ${strictMissingSingles.join(', ')}</span>`;
+                    titleWithWarning += ` <span style="color:#e65100; font-size:11px;">⚠️ 殘留缺口: ${strictMissingSingles.join(', ')}</span>`;
                 }
 
                 generatedTeachingPlans.push({ 
@@ -681,7 +748,7 @@
             }
 
             // ==============================================
-            // 核心 2：方劑結構啟發 (💡 終極防呆與優雅度加權)
+            // 核心 2：方劑結構啟發
             // ==============================================
             let structuralPlans = [];
             
@@ -691,11 +758,14 @@
                 return { formula: f, surplus: surplus, matchCount: matchCount };
             }).filter(item => item.surplus.length <= 5 && item.matchCount >= 2); 
 
-            // 確保候選池以涵蓋率為絕對優先，避免優質大方劑被擠掉
-            unifiedCandidates.sort((a, b) => b.matchCount - a.matchCount);
+            unifiedCandidates.sort((a, b) => {
+                let scoreA = a.matchCount - (a.surplus.length * 1.5);
+                let scoreB = b.matchCount - (b.surplus.length * 1.5);
+                return scoreB - scoreA;
+            });
+            
             let topCandidates = unifiedCandidates.slice(0, 60).map(item => item.formula); 
 
-            // 💡 嚴格字根比對函數：攔截「去某藥又加回同種藥」的荒謬邏輯
             function hasSillySwap(minusArray, missingArray) {
                 for (let m of minusArray) {
                     let coreM = getCoreHerbName(m);
@@ -704,7 +774,7 @@
                         let coreAh = getCoreHerbName(ah);
                         if(!coreAh) continue;
                         if (coreM === coreAh) {
-                            return true; // 發現字根完全相同的替換，立即判死刑
+                            return true;
                         }
                     }
                 }
@@ -743,7 +813,6 @@
                 for(let j=i+1; j<topCandidates.length; j++) {
                     let f2 = topCandidates[j];
                     
-                    // 💡 防呆：阻擋同名方劑的無意義疊加
                     if (getCleanDisplayName(f1.name) === getCleanDisplayName(f2.name)) continue;
 
                     let combinedHerbs = new Set(f1.herbArray);
@@ -797,7 +866,6 @@
                 }
             }
 
-            // 💡 核心演算法：根據醫師選擇的分析模式，進行權重排序
             const currentMode = document.getElementById('analysisModeSelect').value;
             if (currentMode === 'compact') {
                 deduplicatedPlans.sort((a, b) => {
@@ -805,7 +873,6 @@
                     return b.formulaHerbCount - a.formulaHerbCount; 
                 });
             } else {
-                // 臨床優雅度模式：重懲「減藥」，降低雙複方的懲罰
                 deduplicatedPlans.sort((a, b) => {
                     let costA = (a.formulas.length > 1 ? 2 : 0) + (a.singles.length * 1.5) + (a.minusHerbs.length * 5) + (a.missingSingles.length * 10);
                     let costB = (b.formulas.length > 1 ? 2 : 0) + (b.singles.length * 1.5) + (b.minusHerbs.length * 5) + (b.missingSingles.length * 10);
@@ -819,10 +886,8 @@
             let usedFormulaConcepts = new Set();
             let remainingPlans = [];
 
-            // 💡 多樣性確保：允許 A+B 與 A+C，但阻擋完全相同的骨架
             for(let p of deduplicatedPlans) {
                 let concepts = getPlanFormulaConcepts(p);
-                // 只有當該方案的所有核心複方「全部」都被前面的方案用過時，才視為無新意重疊
                 let isCompletelyRedundant = concepts.every(c => usedFormulaConcepts.has(c));
                 
                 if(!isCompletelyRedundant) {
@@ -887,7 +952,6 @@
                 });
             }
 
-            // 💡 修復：顯示結果後，留在使用者當前選擇的頁籤
             let activeTabId = document.querySelector('.tab-btn.active').id;
             let activeTab = activeTabId === 'tabStructure' ? 'structure' : 'strict';
             document.getElementById('analysisResultArea').style.display = 'block';
