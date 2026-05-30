@@ -26,6 +26,8 @@
         * { box-sizing: border-box; }
         body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; display: flex; flex-direction: column; min-height: 100vh;}
         .header { text-align: center; margin-bottom: 20px; color: #2c3e50; }
+        .header h1 { margin-bottom: 10px; }
+        .header p { margin-top: 0; color: #666; }
         
         .main-content { flex: 1; }
         .container { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; align-items: flex-start; }
@@ -35,13 +37,19 @@
         
         input, select, button { padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
         
-        .search-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-        .search-bar input { flex: 1; min-width: 200px; }
+        /* 💡 霸氣置頂的搜尋欄位樣式 */
+        .search-bar-wrapper { position: relative; margin-bottom: 20px; }
+        .search-bar-wrapper input { width: 100%; padding: 14px 15px 14px 45px; font-size: 16px; border: 2px solid #0288d1; border-radius: 8px; box-shadow: 0 4px 6px rgba(2, 136, 209, 0.1); transition: 0.3s;}
+        .search-bar-wrapper input:focus { outline: none; box-shadow: 0 4px 12px rgba(2, 136, 209, 0.3); }
+        .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); font-size: 20px; color: #0288d1; pointer-events: none;}
         
-        .brand-filters-container { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 10px; margin-bottom: 15px; }
-        .brand-filters-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 14px; font-weight: bold; flex-wrap: wrap; gap: 10px;}
-        .brand-filters { display: flex; flex-wrap: wrap; gap: 10px; max-height: 120px; overflow-y: auto; font-size: 14px; }
-        .brand-filters label { display: flex; align-items: center; cursor: pointer; background: #fff; padding: 6px 10px; border-radius: 20px; border: 1px solid #ddd; }
+        /* 💡 可收合的篩選器樣式 */
+        .brand-filters-container { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 10px 15px; margin-bottom: 15px; }
+        .brand-filters-container summary { font-size: 15px; font-weight: bold; cursor: pointer; outline: none; color: #2c3e50; display: flex; align-items: center; user-select: none; }
+        .brand-filters-container summary:hover { color: #0288d1; }
+        .filters-actions { margin: 10px 0; }
+        .brand-filters { display: flex; flex-wrap: wrap; gap: 10px; max-height: 150px; overflow-y: auto; font-size: 14px; padding-top: 5px;}
+        .brand-filters label { display: flex; align-items: center; cursor: pointer; background: #fff; padding: 6px 10px; border-radius: 20px; border: 1px solid #ddd; transition: 0.2s;}
         .brand-filters label:hover { background: #eef2f5; }
         .brand-count { color: #888; font-size: 12px; margin-left: 4px; }
         
@@ -99,7 +107,12 @@
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
 
-        .result-item { padding: 10px 0; border-bottom: 1px dashed #ccc; display: flex; justify-content: space-between; font-weight: bold; align-items: center;}
+        /* 💡 溯源微型標籤排版 */
+        .result-item { padding: 12px 0; border-bottom: 1px dashed #ccc; display: flex; justify-content: space-between; font-weight: bold; align-items: flex-start;}
+        .result-item-left { flex: 1; }
+        .result-item-right { white-space: nowrap; padding-left: 10px;}
+        .source-abbr { display: inline-block; font-size: 11px; color: #888; background: #eee; padding: 2px 6px; border-radius: 4px; margin-top: 4px; margin-right: 4px; font-weight: normal;}
+
         .toxic-alert { color: #d32f2f; font-size: 12px; display: block; margin-top: 3px; font-weight: normal;} 
         .niuxi-alert { color: #e67e22; font-size: 12px; display: block; margin-top: 3px; font-weight: normal;}
         .total-weight { font-size: 18px; color: #d32f2f; margin-top: 15px; text-align: right; font-weight: bold;}
@@ -112,7 +125,6 @@
         .tab-btn { flex: 1; padding: 10px; text-align: center; cursor: pointer; font-weight: bold; color: #666; background: #f8f9fa; border: none; outline: none;}
         .tab-btn.active { color: #0277bd; border-bottom: 3px solid #0277bd; background: #fff; }
 
-        /* 💡 頁尾 Footer 與公測回報區塊樣式 */
         .platform-footer { margin-top: 40px; padding: 30px 20px; background-color: #2c3e50; color: #ecf0f1; text-align: center; font-size: 14px; border-top: 4px solid #0288d1;}
         .platform-footer a { color: #81d4fa; text-decoration: none; transition: 0.3s; }
         .platform-footer a:hover { color: #fff; text-decoration: underline; }
@@ -122,11 +134,16 @@
         
         .feedback-box { margin: 25px auto 10px auto; max-width: 650px; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.3); }
 
+        /* 💡 針對手機版的 RWD 修正 */
         @media (max-width: 768px) {
+            .header h1 { font-size: 22px; line-height: 1.3; } /* 修復標題過大 */
+            .header p { font-size: 13px; margin-top: 5px; }
             .container { flex-direction: column; gap: 15px; }
             .column { width: 100%; padding: 15px; }
             .right-col { position: relative; top: 0; } 
-            .search-bar input { width: 100%; }
+            
+            /* 修復下拉選單文字撐破螢幕 */
+            #analysisModeSelect { max-width: 100%; white-space: normal; word-break: break-word; }
         }
     </style>
 </head>
@@ -142,26 +159,26 @@
 
         <div class="container">
             <div class="column left-col">
-                <h3>🔍 搜尋與開立處方</h3>
                 
-                <div class="brand-filters-container">
-                    <div class="brand-filters-header">
-                        <span>🏢 廠牌篩選 (勾選您診所進貨的藥廠)</span>
-                        <div>
-                            <button class="btn-small" onclick="selectAllBrands(true)">全選</button>
-                            <button class="btn-small" onclick="selectAllBrands(false)">全不選</button>
-                        </div>
+                <div class="search-bar-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" placeholder="請先點此搜尋藥名、注音簡稱或許可證字號..." onkeyup="filterDrugs()">
+                </div>
+                
+                <details open class="brand-filters-container">
+                    <summary>🏢 廠牌篩選設定 (點擊收合 / 展開)</summary>
+                    <div class="filters-actions">
+                        <button class="btn-small" onclick="selectAllBrands(true)">全選</button>
+                        <button class="btn-small" onclick="selectAllBrands(false)">全不選</button>
                     </div>
                     <div class="brand-filters" id="brandCheckboxes"></div>
-                </div>
+                </details>
 
-                <div class="brand-filters-container">
-                    <div class="brand-filters-header">
-                        <span>💊 劑型篩選 (預設已勾選常用粉劑型態)</span>
-                        <div>
-                            <button class="btn-small" onclick="selectAllCategories(true)">全選</button>
-                            <button class="btn-small" onclick="selectAllCategories(false)">全不選</button>
-                        </div>
+                <details open class="brand-filters-container">
+                    <summary>💊 劑型篩選設定 (預設已勾粉劑)</summary>
+                    <div class="filters-actions">
+                        <button class="btn-small" onclick="selectAllCategories(true)">全選</button>
+                        <button class="btn-small" onclick="selectAllCategories(false)">全不選</button>
                     </div>
                     <div class="brand-filters" id="categoryCheckboxes"></div>
                     
@@ -185,11 +202,7 @@
                             <p><strong>特性：</strong>介於散劑與顆粒劑之間，是目前台灣許多大型中藥廠（如順天堂、莊松榮等）最常採用的科學中藥劑型。它兼具了散劑「容易快速溶解、好吸收」以及顆粒劑「流動性佳、不易飛散嗆喉」的雙重優點。</p>
                         </div>
                     </details>
-                </div>
-
-                <div class="search-bar">
-                    <input type="text" id="searchInput" placeholder="輸入藥名、注音簡稱或許可證字號搜尋..." onkeyup="filterDrugs()">
-                </div>
+                </details>
                 
                 <div style="max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; margin-bottom: 20px;">
                     <ul class="drug-list" id="drugList"></ul>
@@ -203,11 +216,11 @@
                     <p style="font-size:12px; color:#666; margin:0 0 10px 0;">深入分析疊方背後的「原藥材本質」，提供嚴謹的劑量等效方案，以及引入「加減法」思維的多變結構啟發。</p>
                     
                     <div style="margin-bottom: 12px; background: #e3f2fd; padding: 10px; border-radius: 4px; border: 1px solid #bbdefb; display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
-                        <label style="font-size:14px; color:#0d47a1; font-weight:bold; cursor:pointer;">
+                        <label style="font-size:14px; color:#0d47a1; font-weight:bold; cursor:pointer; width: 100%;">
                             🧠 AI 結構分析模式：
-                            <select id="analysisModeSelect" onchange="switchTab('structure'); runEducationalAnalysis();" style="padding: 5px; font-size: 14px;">
+                            <select id="analysisModeSelect" onchange="switchTab('structure'); runEducationalAnalysis();" style="padding: 5px; font-size: 14px; width: 100%; margin-top:5px;">
                                 <option value="compact" selected>骨架精簡模式 (原比重加權，追求總品項最少)</option>
-                                <option value="elegant">臨床優雅模式 (新演算法，鼓勵經典疊方、重懲減藥)</option>
+                                <option value="elegant">臨床優雅模式 (鼓勵經典疊方、重懲減藥)</option>
                             </select>
                         </label>
                     </div>
@@ -215,7 +228,7 @@
                     <div style="margin-bottom: 12px; background: #e8f5e9; padding: 8px; border-radius: 4px; border: 1px solid #c8e6c9;">
                         <label style="font-size:14px; color:#2e7d32; font-weight:bold; cursor:pointer; display: flex; align-items: center; gap: 8px;">
                             <input type="checkbox" id="veganModeToggle" style="width:18px; height:18px;" onchange="runEducationalAnalysis()">
-                            🌱 純素友善模式 (AI 重新推演時，將強制排除含動物性成分之科中與方劑)
+                            🌱 純素友善模式 (過濾動物性科中與方劑)
                         </label>
                     </div>
 
@@ -240,7 +253,7 @@
 
             <div class="column right-col">
                 <h3>📊 原藥材換算結果</h3>
-                <p style="font-size: 13px; color: #666;">此為您開立處方的「原藥材本質」。教學引擎將以此為目標進行重新建構。</p>
+                <p style="font-size: 13px; color: #666;">此為您開立處方的「原藥材本質」。各藥材下方標示其來源方劑縮寫。</p>
                 <ul class="result-list" id="resultList"></ul>
                 <div class="total-weight" id="totalWeightDisplay" style="border-top: 2px solid #333; padding-top:10px;">總生藥重量: 0.00 g</div>
             </div>
@@ -256,7 +269,6 @@
             <a href="https://drsmall8.com/" target="_blank" class="footer-link-btn">🌐 小巴中醫官網</a>
             <a href="https://www.facebook.com/DrSmall8" target="_blank" class="footer-link-btn">📘 小巴醫師 FB</a>
             <a href="https://www.facebook.com/DrChienChien/" target="_blank" class="footer-link-btn">📘 陳建中醫師 FB</a>
-            <a href="https://www.linkedin.com/in/drsmall8" target="_blank" class="footer-link-btn">💼 小巴醫師 LinkedIn</a>
         </div>
 
         <div class="feedback-box">
@@ -279,13 +291,22 @@
         let globalFinalHerbs = {}; 
         let generatedTeachingPlans = []; 
 
+        // 💡 圖譜擴充：完整對齊常見同名異物
         const herbDictionary = {
             "甘草(炙)": "炙甘草", "甘草（炙）": "炙甘草", "蜜甘草": "炙甘草", "炙草": "炙甘草",
             "乾薑": "乾薑", "薑(炮)": "炮薑", "炮薑": "炮薑",
             "半夏(薑製)": "薑半夏", "半夏": "薑半夏", "製半夏": "薑半夏",
             "大黃(酒製)": "大黃", "大黃(酒炒)": "大黃",
             "苦蔘": "苦參", "苦蔘根": "苦參", "苦參根": "苦參",
-            "忍冬花": "金銀花", "銀花": "金銀花", "金銀花": "金銀花" 
+            "忍冬花": "金銀花", "銀花": "金銀花", "金銀花": "金銀花",
+            "鹿角": "鹿角膠",
+            "山梔子": "梔子",
+            "紫蘇": "紫蘇葉",
+            "乾生薑": "乾薑",
+            "天花粉": "栝樓根(天花粉)", "栝樓根": "栝樓根(天花粉)",
+            "蘆根": "葦根",
+            "芍藥": "白芍",
+            "大棗": "紅棗"
         };
         
         const toxicAlerts = {
@@ -494,6 +515,12 @@
             return name.replace(/[\(（].*?[\)）]/g, '').replace(/濃縮|顆粒|細粒|微粒|膠囊|錠劑|散劑|丸劑|浸膏|液/g, '').trim();
         }
         
+        // 💡 取得精簡縮寫 (用於溯源標籤)
+        function getAbbrName(name) {
+            let clean = getCleanDisplayName(name);
+            return clean.length > 3 ? clean.substring(0, 3) : clean;
+        }
+
         function getCoreHerbName(name) {
             return name.replace(/炙|生|白|赤|乾|炮|製|藥|粉|炒|熟|川|懷/g, '').replace(/[\(（].*?[\)）]/g, '').trim();
         }
@@ -532,20 +559,31 @@
             Object.keys(finalHerbs).sort((a, b) => finalHerbs[b] - finalHerbs[a]).forEach(herb => {
                 if(finalHerbs[herb] > 0.01){
                     let alertHtml = '';
-                    let sourceNames = Array.from(herbSources[herb] || []).map(name => getCleanDisplayName(name)).join('、');
+                    let sourceNamesArray = Array.from(herbSources[herb] || []);
+                    let fullSourceNames = sourceNamesArray.map(name => getCleanDisplayName(name)).join('、');
+                    
+                    // 💡 微型縮寫標籤 (讓每個藥材都知道從哪來，但又不雜亂)
+                    let abbrTags = sourceNamesArray.map(name => `<span class="source-abbr">${getAbbrName(name)}</span>`).join('');
 
                     if (isAnimalHerb(herb)) {
                         alertHtml += `<span class="tag-animal">🍖 動物類</span>`;
                     }
 
                     if (herb === "牛膝(需確認川/懷)" || herb === "薑(需確認生/乾)") {
-                        alertHtml += `<span class="niuxi-alert">⚠️ 來自【${sourceNames}】，請確認</span>`;
+                        alertHtml += `<span class="niuxi-alert">⚠️ 來自【${fullSourceNames}】，請確認</span>`;
                     }
                     if(toxicAlerts[herb] && finalHerbs[herb] > toxicAlerts[herb].max) {
-                        alertHtml += `<span class="toxic-alert">⚠️ 超量 (來自: ${sourceNames})</span>`;
+                        alertHtml += `<span class="toxic-alert">⚠️ 超量 (來自: ${fullSourceNames})</span>`;
                     }
                     
-                    list.innerHTML += `<li class="result-item"><div>${herb} ${alertHtml}</div><span>${finalHerbs[herb].toFixed(2)} g</span></li>`;
+                    list.innerHTML += `
+                        <div class="result-item">
+                            <div class="result-item-left">
+                                ${herb} ${alertHtml}
+                                <div>${abbrTags}</div>
+                            </div>
+                            <div class="result-item-right">${finalHerbs[herb].toFixed(2)} g</div>
+                        </div>`;
                 }
             });
             document.getElementById('totalWeightDisplay').innerText = `總生藥重量: ${grandRaw.toFixed(2)} g`;
@@ -759,7 +797,7 @@
             }
 
             // ==============================================
-            // 核心 2：方劑結構啟發 
+            // 核心 2：方劑結構啟發
             // ==============================================
             let structuralPlans = [];
             
