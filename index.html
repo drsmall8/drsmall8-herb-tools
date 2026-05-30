@@ -37,13 +37,11 @@
         
         input, select, button { padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
         
-        /* 霸氣置頂的搜尋欄位樣式 */
         .search-bar-wrapper { position: relative; margin-bottom: 20px; }
         .search-bar-wrapper input { width: 100%; padding: 14px 15px 14px 45px; font-size: 16px; border: 2px solid #0288d1; border-radius: 8px; box-shadow: 0 4px 6px rgba(2, 136, 209, 0.1); transition: 0.3s;}
         .search-bar-wrapper input:focus { outline: none; box-shadow: 0 4px 12px rgba(2, 136, 209, 0.3); }
         .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); font-size: 20px; color: #0288d1; pointer-events: none;}
         
-        /* 可收合的篩選器樣式 */
         .brand-filters-container { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 10px 15px; margin-bottom: 15px; }
         .brand-filters-container summary { font-size: 15px; font-weight: bold; cursor: pointer; outline: none; color: #2c3e50; display: flex; align-items: center; user-select: none; }
         .brand-filters-container summary:hover { color: #0288d1; }
@@ -63,7 +61,6 @@
         .btn-small { padding: 4px 12px; font-size: 14px; cursor: pointer; background: #6c757d; color: white; border: none; border-radius: 4px; }
         .btn-small:hover { background: #5a6268; }
 
-        /* 💡 讓 AI 分析區塊也可收合 */
         .opt-section { background: #fff; border: 2px dashed #0288d1; padding: 15px; border-radius: 8px; margin-top: 20px; }
         .opt-title { font-weight: bold; color: #0277bd; display: flex; align-items: center; gap: 5px; font-size: 16px; cursor: pointer; user-select: none; outline: none;}
         .opt-title:hover { color: #01579b; }
@@ -160,7 +157,7 @@
                 
                 <div class="search-bar-wrapper">
                     <span class="search-icon">🔍</span>
-                    <input type="text" id="searchInput" placeholder="請先點此搜尋藥名、注音簡稱或許可證字號..." onkeyup="filterDrugs()">
+                    <input type="text" id="searchInput" placeholder="點此搜尋 (支援空格或逗號分隔，如：葛根湯 麻黃...)" onkeyup="filterDrugs()">
                 </div>
                 
                 <details class="brand-filters-container">
@@ -230,7 +227,7 @@
                         </label>
                     </div>
 
-                    <button class="add-btn" style="background-color:#0288d1; width:100%; font-size:16px;" onclick="runEducationalAnalysis()">🧠 啟提臨床處方深度分析</button>
+                    <button class="add-btn" style="background-color:#0288d1; width:100%; font-size:16px;" onclick="runEducationalAnalysis()">🧠 啟動臨床處方深度分析</button>
                     
                     <div id="analysisResultArea" style="display:none; margin-top:15px; border-top:1px solid #b3e5fc; padding-top:15px;">
                         <div class="tab-container">
@@ -459,16 +456,28 @@
             }
         }
 
+        // 💡 升級：支援空格與逗號多筆查詢
         function filterDrugs() {
-            const kw = document.getElementById('searchInput').value.trim().toLowerCase();
+            const rawInput = document.getElementById('searchInput').value;
+            const keywords = rawInput.split(/[,，\s]+/).map(kw => kw.trim().toLowerCase()).filter(kw => kw.length > 0);
+            
             const checkedBrands = Array.from(document.querySelectorAll('.brand-cb:checked')).map(cb => cb.value);
             const checkedCategories = Array.from(document.querySelectorAll('.category-cb:checked')).map(cb => cb.value);
             
-            renderDrugs(database.filter(d => 
-                checkedBrands.includes(d.brand) && 
-                checkedCategories.includes(d.category) && 
-                (d.name.toLowerCase().includes(kw) || d.license.toLowerCase().includes(kw) || d.bopomofo.toLowerCase().includes(kw))
-            ));
+            let filteredData = database.filter(d => {
+                if (!checkedBrands.includes(d.brand) || !checkedCategories.includes(d.category)) {
+                    return false;
+                }
+                if (keywords.length === 0) return true;
+
+                return keywords.some(kw => 
+                    d.name.toLowerCase().includes(kw) || 
+                    d.license.toLowerCase().includes(kw) || 
+                    d.bopomofo.toLowerCase().includes(kw)
+                );
+            });
+            
+            renderDrugs(filteredData);
         }
 
         function addToPrescription(id) {
