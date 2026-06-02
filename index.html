@@ -167,15 +167,23 @@
         
         .feedback-box { margin: 25px auto 10px auto; max-width: 650px; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.3); }
 
+        /* FB/手機寬度優化設定 */
         @media (max-width: 768px) {
-            .header h1 { font-size: 22px; line-height: 1.3; } 
-            .header p { font-size: 13px; margin-top: 5px; }
-            .container { flex-direction: column; gap: 15px; }
-            .column { width: 100%; padding: 15px; }
+            body { padding: 8px 5px; } 
+            .header h1 { font-size: 20px; line-height: 1.3; margin-bottom: 5px;} 
+            .header p { font-size: 12px; margin-top: 0; }
+            .container { flex-direction: column; gap: 10px; width: 100%; max-width: 100%; }
+            .column { width: 100%; padding: 12px 10px; border-radius: 4px; }
             .right-col { position: relative; top: 0; } 
-            .mode-switch-container { width: 100%; }
-            .mode-btn { flex: 1; padding: 10px; font-size: 14px; }
+            .mode-switch-container { width: 100%; margin-bottom: 15px; }
+            .mode-btn { flex: 1; padding: 10px 5px; font-size: 14px; white-space: nowrap;}
             #analysisModeSelect { max-width: 100%; white-space: normal; word-break: break-word; }
+            
+            .result-item { padding: 10px 0; align-items: center; }
+            .result-item-left { word-break: keep-all; font-size: 15px; }
+            .result-item-right { white-space: nowrap; padding-left: 8px; font-size: 16px; font-weight: 900; }
+            
+            .source-abbr { font-size: 10px; padding: 2px 4px; margin-right: 2px; }
         }
     </style>
 </head>
@@ -688,10 +696,13 @@
                 let surplus = f.herbArray.filter(h => !compositionArray.includes(h)); 
                 let missing = compositionArray.filter(h => !f.herbArray.includes(h)); 
 
-                let baseScore = match.length - (surplus.length * 0.8);
-                
-                let ratioScore = 0;
+                let matchRate = match.length / f.uniqueHerbCount; 
+                let userCoverage = match.length / compositionArray.length; 
+                let baseScore = (matchRate * 0.6 + userCoverage * 0.4) * 100; 
+
+                let finalScore = baseScore;
                 let doseMsg = "";
+                
                 if (hasDoses && match.length >= 2) {
                     let dotP = 0, normU = 0, normF = 0;
                     match.forEach(h => {
@@ -703,15 +714,17 @@
                     });
                     if (normU > 0 && normF > 0) {
                         let cosine = dotP / (Math.sqrt(normU) * Math.sqrt(normF));
-                        ratioScore = cosine * 5; 
-                        doseMsg = `<span style="color:#d35400; font-size:12px; margin-left:10px;">⚖️ 比例相似度: ${(cosine*100).toFixed(0)}%</span>`;
+                        let cosinePercent = cosine * 100;
+                        
+                        finalScore = (cosinePercent * 0.7) + (baseScore * 0.3); 
+                        doseMsg = `<span style="color:#d35400; font-size:13px; margin-left:10px; font-weight:bold;">⚖️ 比例相似度: ${cosinePercent.toFixed(1)}%</span>`;
                     }
                 }
 
-                return { formula: f, match, surplus, missing, score: baseScore + ratioScore, doseMsg };
+                return { formula: f, match, surplus, missing, finalScore, doseMsg };
             }).filter(r => r.match.length >= 2); 
 
-            results.sort((a,b) => b.score - a.score);
+            results.sort((a,b) => b.finalScore - a.finalScore);
             let topResults = results.slice(0, 10);
 
             if (topResults.length === 0) {
@@ -727,8 +740,8 @@
                 radarList.innerHTML += `
                     <div class="radar-card">
                         <div class="radar-title">
-                            <span>🎯 命中 #${idx+1}：${getCleanDisplayName(r.formula.name)}</span>
-                            <span class="radar-score">${r.match.length} 味吻合</span>
+                            <span>🎯 #${idx+1}：${getCleanDisplayName(r.formula.name)}</span>
+                            <span class="radar-score">綜合相容度 ${r.finalScore.toFixed(0)}%</span>
                         </div>
                         <div style="font-size:13px; margin-bottom:5px;">${matchHtml} ${r.doseMsg}</div>
                         ${surplusHtml}
