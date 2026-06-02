@@ -195,11 +195,11 @@
             <p>臨床處方優化 ✕ AI 學習系統</p>
         </div>
 
-        <div id="statusMessage">正在從 Google 雲端載入最新中藥資料庫，請稍候...</div>
+        <div id="statusMessage">正在從 Google 雲端載入資料，請稍候...</div>
 
         <div class="mode-switch-container">
             <button id="btnModeClinical" class="mode-btn active-clinical" onclick="switchMainMode('clinical')">💊 臨床換算模式</button>
-            <button id="btnModeLearning" class="mode-btn" onclick="switchMainMode('learning')">🧠 AI 方劑雷達模式</button>
+            <button id="btnModeLearning" class="mode-btn" onclick="switchMainMode('learning')">🧠 單方學習模式</button>
         </div>
 
         <div class="container">
@@ -242,7 +242,7 @@
                     <ul class="drug-list" id="drugList"></ul>
                 </div>
 
-                <h3>📝 目前處方 (學習模式下，可不輸入劑量)</h3>
+                <h3>📝 目前處方 <span id="prescHint" style="font-size:13px; color:#666; font-weight:normal;">(學習模式下，可不輸入劑量)</span></h3>
                 <div id="prescriptionList"></div>
 
                 <details open class="opt-section" id="clinicalAnalysisSection">
@@ -298,7 +298,7 @@
                 </div>
 
                 <div id="learningRadarBox" style="display:none;">
-                    <h3>💡 AI 方劑雷達 (反向推導)</h3>
+                    <h3>💡 單方學習模式 (方義反推)</h3>
                     <p style="font-size: 13px; color: #666;">系統會根據您左側輸入的藥物，即時比對資料庫，反推最可能的經典方義與劑量結構。</p>
                     
                     <div style="background: #f4f6f7; padding: 10px; border-radius: 6px; font-size:13px; margin-bottom:15px; color:#555;">
@@ -306,7 +306,7 @@
                     </div>
 
                     <div id="radarResultsList">
-                        <p style="color:#888; text-align:center; padding: 20px;">請在左側搜尋並加入單方/複方，<br>雷達將自動啟動掃描。</p>
+                        <p style="color:#888; text-align:center; padding: 20px;">請在左側搜尋並加入單方，<br>雷達將自動啟動掃描。</p>
                     </div>
                 </div>
 
@@ -340,7 +340,10 @@
         const googleSheetCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5wPHCM9ybm9133NpX9HgFee9chFqvpvr9J2yQG8NVpzVBVeZvkOkkXI6vgva32xs8C_c2SbI5lObD/pub?output=csv";
 
         let database = []; 
-        let prescription = []; 
+        let prescriptionClinical = []; // 臨床模式的處方記憶
+        let prescriptionLearning = []; // 學習模式的處方記憶
+        let prescription = prescriptionClinical; // 當前正在使用的陣列參考
+
         let globalFinalHerbs = {}; 
         let generatedTeachingPlans = []; 
         let currentUIMode = 'clinical'; 
@@ -428,20 +431,28 @@
             const clinBox = document.getElementById('clinicalResultBox');
             const learnBox = document.getElementById('learningRadarBox');
             const clinOpt = document.getElementById('clinicalAnalysisSection');
+            const prescHint = document.getElementById('prescHint');
 
             if (mode === 'clinical') {
+                prescription = prescriptionClinical; // 切換回臨床記憶體
                 btnClin.classList.add('active-clinical');
                 btnLearn.classList.remove('active-learning');
                 clinBox.style.display = 'block';
                 learnBox.style.display = 'none';
                 clinOpt.style.display = 'block';
+                prescHint.style.display = 'none';
             } else {
+                prescription = prescriptionLearning; // 切換到學習記憶體 (完全獨立)
                 btnLearn.classList.add('active-learning');
                 btnClin.classList.remove('active-clinical');
                 learnBox.style.display = 'block';
                 clinBox.style.display = 'none';
                 clinOpt.style.display = 'none';
+                prescHint.style.display = 'inline-block';
             }
+            
+            filterDrugs(); // 重新過濾清單 (學習模式強制只顯示單方)
+            renderPrescription(); 
             calculateResult(); 
         }
 
@@ -484,7 +495,7 @@
                     populateCategoryCheckboxes(categoryCounts);
                     statusMessage.style.backgroundColor = "#d4edda"; 
                     statusMessage.style.color = "#155724";
-                    statusMessage.innerHTML = `✅ 成功連線。載入 <strong>${database.length}</strong> 筆精準純化資料。`;
+                    statusMessage.innerHTML = `✅ 成功連線。載入 <strong>${database.length}</strong> 筆資料。`;
                     filterDrugs(); 
                 }
             });
@@ -539,6 +550,9 @@
             const checkedCategories = Array.from(document.querySelectorAll('.category-cb:checked')).map(cb => cb.value);
             
             let filteredData = database.filter(d => {
+                // 若為單方學習模式，強制過濾掉複方
+                if (currentUIMode === 'learning' && d.uniqueHerbCount > 1) return false;
+                
                 if (!checkedBrands.includes(d.brand) || !checkedCategories.includes(d.category)) return false;
                 if (keywords.length === 0) return true;
                 return keywords.some(kw => d.name.toLowerCase().includes(kw) || d.license.toLowerCase().includes(kw) || d.bopomofo.toLowerCase().includes(kw));
@@ -554,7 +568,14 @@
         }
 
         function removePrescription(id) {
-            prescription = prescription.filter(p => p.id !== id); 
+            // 從對應的記憶體中移除
+            if(currentUIMode === 'clinical') {
+                 prescriptionClinical = prescriptionClinical.filter(p => p.id !== id);
+                 prescription = prescriptionClinical;
+            } else {
+                 prescriptionLearning = prescriptionLearning.filter(p => p.id !== id);
+                 prescription = prescriptionLearning;
+            }
             renderPrescription(); calculateResult();
         }
 
@@ -666,6 +687,9 @@
             }
         }
 
+        // ==========================================
+        // 階層式計分引擎 (學習模式雷達)
+        // ==========================================
         function runAI_Radar(compositionArray, doseHerbsMap) {
             const targetDisplay = document.getElementById('radarTargetHerbs');
             const radarList = document.getElementById('radarResultsList');
@@ -673,12 +697,11 @@
 
             if (compositionArray.length === 0) {
                 targetDisplay.innerText = '無';
-                radarList.innerHTML = '<p style="color:#888; text-align:center; padding: 20px;">請在左側搜尋並加入單方/複方，<br>雷達將自動啟動掃描。</p>';
+                radarList.innerHTML = '<p style="color:#888; text-align:center; padding: 20px;">請在左側搜尋並加入單方，<br>雷達將自動啟動掃描。</p>';
                 return;
             }
 
             targetDisplay.innerText = compositionArray.join(', ');
-            
             let hasDoses = Object.keys(doseHerbsMap).length > 0;
             
             let allFormulas = [];
@@ -696,11 +719,11 @@
                 let surplus = f.herbArray.filter(h => !compositionArray.includes(h)); 
                 let missing = compositionArray.filter(h => !f.herbArray.includes(h)); 
 
-                let matchRate = match.length / f.uniqueHerbCount; 
-                let userCoverage = match.length / compositionArray.length; 
-                let baseScore = (matchRate * 0.6 + userCoverage * 0.4) * 100; 
-
-                let finalScore = baseScore;
+                // 第一關：絕對命中數量分數 (1味藥 = 100分)
+                let baseScore = match.length * 100;
+                
+                // 第二關：比例相似度附加分 (0~99分)
+                let ratioBonus = 0;
                 let doseMsg = "";
                 
                 if (hasDoses && match.length >= 2) {
@@ -714,16 +737,21 @@
                     });
                     if (normU > 0 && normF > 0) {
                         let cosine = dotP / (Math.sqrt(normU) * Math.sqrt(normF));
-                        let cosinePercent = cosine * 100;
-                        
-                        finalScore = (cosinePercent * 0.7) + (baseScore * 0.3); 
-                        doseMsg = `<span style="color:#d35400; font-size:13px; margin-left:10px; font-weight:bold;">⚖️ 比例相似度: ${cosinePercent.toFixed(1)}%</span>`;
+                        ratioBonus = cosine * 99; // 滿分99，確保不會超過一味藥(100分)的價值
+                        doseMsg = `<span style="color:#d35400; font-size:13px; margin-left:10px; font-weight:bold;">⚖️ 比例相容度: ${(cosine*100).toFixed(1)}%</span>`;
                     }
                 }
 
-                return { formula: f, match, surplus, missing, finalScore, doseMsg };
+                // 第三關：減扣分 (方劑多出來沒開到的藥，每味扣 10 分)
+                let penalty = surplus.length * 10;
+                
+                // 最終綜合排序分數
+                let finalScore = baseScore + ratioBonus - penalty;
+
+                return { formula: f, match, surplus, missing, finalScore, baseScore, ratioBonus, doseMsg };
             }).filter(r => r.match.length >= 2); 
 
+            // 嚴格依分數高低排序
             results.sort((a,b) => b.finalScore - a.finalScore);
             let topResults = results.slice(0, 10);
 
@@ -737,11 +765,15 @@
                 let surplusHtml = r.surplus.length > 0 ? `<div style="font-size:13px; color:#c0392b; margin-top:5px;"><strong>未涵蓋(減)：</strong> 去 ${r.surplus.join(', ')}</div>` : '';
                 let missingHtml = r.missing.length > 0 ? `<div style="font-size:13px; color:#2980b9; margin-top:2px;"><strong>額外添(加)：</strong> 加 ${r.missing.join(', ')}</div>` : '';
 
+                // 計算顯示用總分 (避免使用者看不懂底層算分邏輯)
+                let displayScore = (r.finalScore / (r.formula.uniqueHerbCount * 100)) * 100;
+                if(displayScore > 100) displayScore = 100; // 防呆
+
                 radarList.innerHTML += `
                     <div class="radar-card">
                         <div class="radar-title">
                             <span>🎯 #${idx+1}：${getCleanDisplayName(r.formula.name)}</span>
-                            <span class="radar-score">綜合相容度 ${r.finalScore.toFixed(0)}%</span>
+                            <span class="radar-score">${r.match.length} 味吻合</span>
                         </div>
                         <div style="font-size:13px; margin-bottom:5px;">${matchHtml} ${r.doseMsg}</div>
                         ${surplusHtml}
@@ -1176,10 +1208,13 @@
             let selectedPlan = plan[index];
             if (!selectedPlan) return;
 
+            // 確保套用時寫入正確的記憶體
             prescription = [];
             selectedPlan.combination.forEach(c => {
                 prescription.push({ ...c.item, dose: c.dose });
             });
+            if (currentUIMode === 'clinical') prescriptionClinical = prescription;
+            else prescriptionLearning = prescription;
 
             renderPrescription();
             calculateResult();
