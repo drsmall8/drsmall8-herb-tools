@@ -1,3 +1,6 @@
+// ==========================================
+// 讀取本地端 CSV 資料庫 (確保 database.csv 在同個資料夾)
+// ==========================================
 const googleSheetCsvUrl = "database.csv";
 
 let database = []; 
@@ -35,6 +38,7 @@ const eighteenIncompatibilities = [
     { base: ["藜蘆"], against: ["人參", "黨參", "沙參", "丹參", "玄參", "細辛", "芍藥", "白芍", "赤芍", "苦參"] }
 ];
 
+// 特殊安全防呆清單
 const g6pdAlerts = ["黃連", "冰片", "珍珠粉", "牛黃", "金銀花", "牡丹皮", "生地黃", "柴胡", "大黃", "虎杖", "番瀉葉"];
 const dopingAlerts = ["麻黃", "蓮子心", "丁香", "附子", "炮附子", "吳茱萸", "南天星", "枳實", "枳殼", "細辛", "蒼耳子", "辛夷"];
 
@@ -83,7 +87,7 @@ function toggleMobileCard(element) {
     }
 }
 
-// 🌟 三模式切換整合引擎 (修復前一版本覆蓋導致的 UI 隱藏 Bug)
+// 🌟 三模式 UI 切換引擎 (加入強效防呆，找不到元素也不會當機)
 function switchMainMode(mode) {
     currentUIMode = mode;
     
@@ -96,51 +100,50 @@ function switchMainMode(mode) {
     const learnBox = document.getElementById('learningRadarBox');
     const clinOpt = document.getElementById('clinicalAnalysisSection');
     const prescHint = document.getElementById('prescHint');
-    
     const filterBrands = document.getElementById('filterBrandsBox');
     const filterCats = document.getElementById('filterCategoriesBox');
     const safetyBox = document.getElementById('safetyToggleBox');
 
     // 歸位主要佈局
-    statsUI.style.display = 'none';
-    mainUI.style.display = 'flex';
+    if (statsUI) statsUI.style.display = 'none';
+    if (mainUI) mainUI.style.display = 'flex';
 
     if (mode === 'clinical') {
         prescription = prescriptionClinical; 
-        btnClin.classList.add('active-clinical');
-        if(btnLearn) btnLearn.classList.remove('active-learning');
+        if (btnClin) btnClin.classList.add('active-clinical');
+        if (btnLearn) btnLearn.classList.remove('active-learning');
         
-        clinBox.style.display = 'block';
-        learnBox.style.display = 'none';
-        clinOpt.style.display = 'block';
-        prescHint.style.display = 'none';
+        if (clinBox) clinBox.style.display = 'block';
+        if (learnBox) learnBox.style.display = 'none';
+        if (clinOpt) clinOpt.style.display = 'block';
+        if (prescHint) prescHint.style.display = 'none';
         
-        // 顯示篩選表單
-        filterBrands.style.display = 'block';
-        filterCats.style.display = 'block';
-        safetyBox.style.display = 'block';
+        // 恢復顯示篩選表單
+        if (filterBrands) filterBrands.style.display = 'block';
+        if (filterCats) filterCats.style.display = 'block';
+        if (safetyBox) safetyBox.style.display = 'block';
         
     } else if (mode === 'learning') {
         prescription = prescriptionLearning; 
-        btnLearn.classList.add('active-learning');
-        btnClin.classList.remove('active-clinical');
+        if (btnLearn) btnLearn.classList.add('active-learning');
+        if (btnClin) btnClin.classList.remove('active-clinical');
         
-        learnBox.style.display = 'block';
-        clinBox.style.display = 'none';
-        clinOpt.style.display = 'none';
-        prescHint.style.display = 'inline-block';
+        if (learnBox) learnBox.style.display = 'block';
+        if (clinBox) clinBox.style.display = 'none';
+        if (clinOpt) clinOpt.style.display = 'none';
+        if (prescHint) prescHint.style.display = 'inline-block';
         
-        // 🌟 隱藏干擾表單（徹底減法設計）
-        filterBrands.style.display = 'none';
-        filterCats.style.display = 'none';
-        safetyBox.style.display = 'none';
+        // 🌟 單方學習模式：隱藏不必要的篩選表單
+        if (filterBrands) filterBrands.style.display = 'none';
+        if (filterCats) filterCats.style.display = 'none';
+        if (safetyBox) safetyBox.style.display = 'none';
 
     } else if (mode === 'stats') {
-        // 🌟 進入隱藏開發者醫案數據除錯面版
-        mainUI.style.display = 'none';
-        statsUI.style.display = 'flex';
-        btnClin.classList.remove('active-clinical');
-        if(btnLearn) btnLearn.classList.remove('active-learning');
+        // 🌟 開發者模式：隱藏主系統，顯示統計頁面
+        if (mainUI) mainUI.style.display = 'none';
+        if (statsUI) statsUI.style.display = 'flex';
+        if (btnClin) btnClin.classList.remove('active-clinical');
+        if (btnLearn) btnLearn.classList.remove('active-learning');
         renderStats();
         return; 
     }
@@ -150,11 +153,11 @@ function switchMainMode(mode) {
     calculateResult(); 
 }
 
-// 🌟 開發者內部工具：全單味藥頻率統計表 (採用繁體注音排序 localeCompare)
+// 🌟 開發者：單味藥物統計渲染 (注音排序)
 function renderStats() {
     let herbCounts = {};
+    
     database.forEach(d => {
-        // 只統計經典「複方」裡的單味藥成分
         if (d.uniqueHerbCount > 1 && !d.isWarning) {
             d.herbArray.forEach(herb => {
                 herbCounts[herb] = (herbCounts[herb] || 0) + 1;
@@ -162,17 +165,19 @@ function renderStats() {
         }
     });
 
-    // 轉為陣列並使用台灣注音排序 (zh-TW)
+    // 繁體中文注音排序
     let sortedHerbs = Object.keys(herbCounts).map(h => ({ name: h, count: herbCounts[h] }));
     sortedHerbs.sort((a, b) => a.name.localeCompare(b.name, 'zh-TW'));
 
-    const listArea = document.getElementById('statsListArea');
-    listArea.innerHTML = sortedHerbs.map(h => `
-        <div class="stat-item">
-            <span>🌿 ${h.name}</span>
-            <span class="stat-count">${h.count} 個複方含有</span>
-        </div>
-    `).join('');
+    const listDiv = document.getElementById('statsListArea');
+    if(listDiv) {
+        listDiv.innerHTML = sortedHerbs.map(h => `
+            <div class="stat-item">
+                <span>🌿 ${h.name}</span>
+                <span class="stat-count">${h.count} 個複方</span>
+            </div>
+        `).join('');
+    }
 }
 
 function loadCloudDatabase() {
@@ -210,15 +215,19 @@ function loadCloudDatabase() {
             
             populateBrandCheckboxes(brandCounts);
             populateCategoryCheckboxes(categoryCounts);
-            statusMessage.style.backgroundColor = "#d4edda"; 
-            statusMessage.style.color = "#155724";
-            statusMessage.innerHTML = `✅ 成功連線。載入 <strong>${database.length}</strong> 筆資料。`;
+            if (statusMessage) {
+                statusMessage.style.backgroundColor = "#d4edda"; 
+                statusMessage.style.color = "#155724";
+                statusMessage.innerHTML = `✅ 成功連線。載入 <strong>${database.length}</strong> 筆資料。`;
+            }
             filterDrugs(); 
         },
         error: function(err) {
-            statusMessage.style.backgroundColor = "#f8d7da"; 
-            statusMessage.style.color = "#721c24";
-            statusMessage.innerHTML = `❌ 載入失敗。請確認 database.csv 是否已正確上傳至隔壁目錄。`;
+            if (statusMessage) {
+                statusMessage.style.backgroundColor = "#f8d7da"; 
+                statusMessage.style.color = "#721c24";
+                statusMessage.innerHTML = `❌ 載入失敗。請確認 database.csv 是否存在！`;
+            }
         }
     });
 }
@@ -248,6 +257,7 @@ function selectAllCategories(isSel) { document.querySelectorAll('.category-cb').
 
 function renderDrugs(drugs) {
     const list = document.getElementById('drugList'); 
+    if(!list) return;
     list.innerHTML = '';
     drugs.slice(0, 100).forEach(d => {
         const tag = d.uniqueHerbCount === 1 ? '<span style="color:#e67e22;">[單方]</span>' : '<span style="color:#2980b9;">[複方]</span>';
@@ -262,19 +272,20 @@ function renderDrugs(drugs) {
             </li>`;
     });
     if (drugs.length > 100) {
-        list.innerHTML += `<li class="drug-item" style="color:#888; justify-content:center;">...還有 ${drugs.length - 100} 筆，請縮小範圍。</li>`;
+        list.innerHTML += `<li class="drug-item" style="color:#888; justify-content:center;">...還有 ${drugs.length - 100} 筆，請縮小搜尋範圍。</li>`;
     }
 }
 
-// 🌟 搜尋清單過濾器：單方學習模式下強制限制「單方 + 港香蘭/莊松榮」
+// 🌟 搜尋清單過濾器：學習模式強制鎖定「單方 + 港香蘭/莊松榮」
 function filterDrugs() {
-    const rawInput = document.getElementById('searchInput').value;
-    const keywords = rawInput.split(/[,，\s]+/).map(kw => kw.trim().toLowerCase()).filter(kw => kw.length > 0);
+    const searchInput = document.getElementById('searchInput');
+    if(!searchInput) return;
+    const keywords = searchInput.value.split(/[,，\s]+/).map(kw => kw.trim().toLowerCase()).filter(kw => kw.length > 0);
     
     let filteredData = database.filter(d => {
         if (currentUIMode === 'learning') {
-            if (d.uniqueHerbCount > 1) return false; // 強制過濾為純單方
-            if (!d.brand.includes("港香蘭") && !d.brand.includes("莊松榮")) return false; // 強制雙指標藥廠
+            if (d.uniqueHerbCount > 1) return false; 
+            if (!d.brand.includes("港香蘭") && !d.brand.includes("莊松榮")) return false; 
         } else {
             const checkedBrands = Array.from(document.querySelectorAll('.brand-cb:checked')).map(cb => cb.value);
             const checkedCategories = Array.from(document.querySelectorAll('.category-cb:checked')).map(cb => cb.value);
@@ -312,6 +323,7 @@ function updateDose(id, value) {
 
 function renderPrescription() {
     const list = document.getElementById('prescriptionList'); 
+    if(!list) return;
     list.innerHTML = '';
     prescription.forEach(p => {
         list.innerHTML += `
@@ -329,6 +341,10 @@ function renderPrescription() {
             </div>`;
     });
 }
+
+function getCleanDisplayName(name) { return name.replace(/[\(（].*?[\)）]/g, '').replace(/濃縮|顆粒|細粒|微粒|膠囊|錠劑|散劑|丸劑|浸膏|液/g, '').trim(); }
+function getAbbrName(name) { let clean = getCleanDisplayName(name); return clean.length > 3 ? clean.substring(0, 3) : clean; }
+function getCoreHerbName(name) { return name.replace(/炙|生|白|赤|乾|炮|製|藥|粉|炒|熟|川|懷/g, '').replace(/[\(（].*?[\)）]/g, '').trim(); }
 
 function calculateResult() {
     let finalHerbs = {}; 
@@ -360,17 +376,21 @@ function calculateResult() {
     });
     globalFinalHerbs = finalHerbs;
     
-    // 🌟 若為學習模式，直接跳轉去跑方劑雷達反查
     if (currentUIMode === 'learning') {
         runAI_Radar(Array.from(pureCompositionHerbs), finalHerbs);
         return; 
     }
 
-    const isG6pdChecked = document.getElementById('g6pdToggle') ? document.getElementById('g6pdToggle').checked : false;
-    const isDopingChecked = document.getElementById('dopingToggle') ? document.getElementById('dopingToggle').checked : false;
+    const g6pdToggle = document.getElementById('g6pdToggle');
+    const isG6pdChecked = g6pdToggle ? g6pdToggle.checked : false;
+    
+    const dopingToggle = document.getElementById('dopingToggle');
+    const isDopingChecked = dopingToggle ? dopingToggle.checked : false;
 
     const list = document.getElementById('resultList'); 
+    if(!list) return;
     list.innerHTML = '';
+    
     Object.keys(finalHerbs).sort((a, b) => finalHerbs[b] - finalHerbs[a]).forEach(herb => {
         if(finalHerbs[herb] > 0.01){
             let alertHtml = '';
@@ -382,8 +402,13 @@ function calculateResult() {
             if (herb === "牛膝(需確認川/懷)" || herb === "薑(需確認生/乾)") alertHtml += `<span class="niuxi-alert">⚠️ 來自【${fullSourceNames}】，請確認</span>`;
             if(toxicAlerts[herb] && finalHerbs[herb] > toxicAlerts[herb].max) alertHtml += `<span class="toxic-alert">⚠️ 超量 (來自: ${fullSourceNames})</span>`;
             
-            if (isG6pdChecked && g6pdAlerts.includes(herb)) alertHtml += `<span class="tag-g6pd">⚠️ 蠶豆症警示</span>`;
-            if (isDopingChecked && dopingAlerts.includes(herb)) alertHtml += `<span class="tag-doping">🚫 運動禁藥</span>`;
+            // 🌟 顯示特殊族群標籤
+            if (isG6pdChecked && g6pdAlerts.includes(herb)) {
+                alertHtml += `<span class="tag-g6pd">⚠️ 蠶豆症警示</span>`;
+            }
+            if (isDopingChecked && dopingAlerts.includes(herb)) {
+                alertHtml += `<span class="tag-doping">🚫 運動禁藥</span>`;
+            }
             
             list.innerHTML += `
                 <div class="result-item">
@@ -395,7 +420,9 @@ function calculateResult() {
                 </div>`;
         }
     });
-    document.getElementById('totalWeightDisplay').innerText = `總生藥重量: ${grandRaw.toFixed(2)} g`;
+    
+    const totalDisplay = document.getElementById('totalWeightDisplay');
+    if(totalDisplay) totalDisplay.innerText = `總生藥重量: ${grandRaw.toFixed(2)} g`;
 
     let presentHerbs = Object.keys(finalHerbs).filter(h => finalHerbs[h] > 0.01);
     let alertMessages = [];
@@ -408,18 +435,22 @@ function calculateResult() {
     });
 
     const alertBox = document.getElementById('incompatAlertBox');
-    if (alertMessages.length > 0) {
-        alertBox.innerHTML = alertMessages.join('<br>');
-        alertBox.style.display = 'block';
-    } else {
-        alertBox.style.display = 'none';
+    if(alertBox) {
+        if (alertMessages.length > 0) {
+            alertBox.innerHTML = alertMessages.join('<br>');
+            alertBox.style.display = 'block';
+        } else {
+            alertBox.style.display = 'none';
+        }
     }
 }
 
-// 🌟 階層式計分方劑雷達：限制只比對港香蘭與莊松榮的方劑
+// 🌟 雷達邏輯：鎖定兩家藥廠推導
 function runAI_Radar(compositionArray, doseHerbsMap) {
     const targetDisplay = document.getElementById('radarTargetHerbs');
     const radarList = document.getElementById('radarResultsList');
+    if(!targetDisplay || !radarList) return;
+    
     radarList.innerHTML = '';
 
     if (compositionArray.length === 0) {
@@ -436,7 +467,6 @@ function runAI_Radar(compositionArray, doseHerbsMap) {
     database.forEach(d => {
         let cleanN = getCleanDisplayName(d.name);
         if (d.uniqueHerbCount > 1 && !d.isWarning && !seenNames.has(cleanN)) {
-            // 🌟 限制雷達反查字典：只採用港香蘭與莊松榮的複方組成結構
             if (d.brand.includes("港香蘭") || d.brand.includes("莊松榮")) {
                 seenNames.add(cleanN);
                 allFormulas.push(d);
@@ -449,7 +479,7 @@ function runAI_Radar(compositionArray, doseHerbsMap) {
         let surplus = f.herbArray.filter(h => !compositionArray.includes(h)); 
         let missing = compositionArray.filter(h => !f.herbArray.includes(h)); 
 
-        let baseScore = match.length * 100; // 第一關：味數絕對優先權重
+        let baseScore = match.length * 100;
         let ratioBonus = 0;
         let doseMsg = "";
         
@@ -464,12 +494,12 @@ function runAI_Radar(compositionArray, doseHerbsMap) {
             });
             if (normU > 0 && normF > 0) {
                 let cosine = dotP / (Math.sqrt(normU) * Math.sqrt(normF));
-                ratioBonus = cosine * 99; // 第二關：同味數時比對比例相似度
+                ratioBonus = cosine * 99; 
                 doseMsg = `<span style="color:#d35400; font-size:13px; margin-left:10px; font-weight:bold;">⚖️ 比例相容度: ${(cosine*100).toFixed(1)}%</span>`;
             }
         }
 
-        let penalty = surplus.length * 10; // 第三關：方劑多餘未開藥扣分
+        let penalty = surplus.length * 10;
         let finalScore = baseScore + ratioBonus - penalty;
 
         return { formula: f, match, surplus, missing, finalScore, doseMsg };
@@ -491,7 +521,7 @@ function runAI_Radar(compositionArray, doseHerbsMap) {
         radarList.innerHTML += `
             <div class="radar-card">
                 <div class="radar-title">
-                    <span>🎯 #${idx+1}：${getCleanDisplayName(r.formula.name)} (${r.formula.brand})</span>
+                    <span>🎯 #${idx+1}：${getCleanDisplayName(r.formula.name)}</span>
                     <span class="radar-score">${r.match.length} 味吻合</span>
                 </div>
                 <div style="font-size:13px; margin-bottom:5px;">${matchHtml} ${r.doseMsg}</div>
@@ -516,17 +546,22 @@ function getHerbCoefficient(item, herbName) {
 }
 
 function switchTab(tabName) {
-    document.getElementById('tabStrict').classList.remove('active');
-    document.getElementById('tabStructure').classList.remove('active');
-    document.getElementById('strictPlansArea').style.display = 'none';
-    document.getElementById('structurePlansArea').style.display = 'none';
+    const tabStrict = document.getElementById('tabStrict');
+    const tabStructure = document.getElementById('tabStructure');
+    const strictPlansArea = document.getElementById('strictPlansArea');
+    const structurePlansArea = document.getElementById('structurePlansArea');
+
+    if(tabStrict) tabStrict.classList.remove('active');
+    if(tabStructure) tabStructure.classList.remove('active');
+    if(strictPlansArea) strictPlansArea.style.display = 'none';
+    if(structurePlansArea) structurePlansArea.style.display = 'none';
 
     if(tabName === 'strict') {
-        document.getElementById('tabStrict').classList.add('active');
-        document.getElementById('strictPlansArea').style.display = 'block';
+        if(tabStrict) tabStrict.classList.add('active');
+        if(strictPlansArea) strictPlansArea.style.display = 'block';
     } else {
-        document.getElementById('tabStructure').classList.add('active');
-        document.getElementById('structurePlansArea').style.display = 'block';
+        if(tabStructure) tabStructure.classList.add('active');
+        if(structurePlansArea) structurePlansArea.style.display = 'block';
     }
 }
 
@@ -549,7 +584,8 @@ function runEducationalAnalysis() {
     }
     if (targetHerbNames.length === 0) return;
 
-    const isVeganMode = document.getElementById('veganModeToggle').checked;
+    const veganToggle = document.getElementById('veganModeToggle');
+    const isVeganMode = veganToggle ? veganToggle.checked : false;
     if (isVeganMode) {
         let animalTargets = targetHerbNames.filter(h => isAnimalHerb(h));
         if (animalTargets.length > 0) {
@@ -559,7 +595,7 @@ function runEducationalAnalysis() {
         }
     }
 
-    // 🌟 AI 處方分析字典強制鎖定單一「港香蘭」標準，避免同名方劑多廠牌洗版
+    // 🌟 AI 分析引擎鎖定「港香蘭」邏輯
     let targetSimulationBrand = "港香蘭"; 
     const checkedCategories = Array.from(document.querySelectorAll('.category-cb:checked')).map(cb => cb.value);
     
@@ -578,6 +614,7 @@ function runEducationalAnalysis() {
             if (isVeganMode && item.herbArray.some(h => isAnimalHerb(h))) return false;
             return true;
         });
+        console.warn("查無港香蘭資料，AI 退回使用全局勾選廠牌作為推導依據");
     }
 
     let singleHerbs = validDB.filter(d => d.uniqueHerbCount === 1);
@@ -681,7 +718,7 @@ function runEducationalAnalysis() {
     if (pureSinglePlan) finalDisplayPlans.push(pureSinglePlan);
 
     const optList = document.getElementById('optimizedList');
-    optList.innerHTML = '';
+    if(optList) optList.innerHTML = '';
     
     if (finalDisplayPlans.length === 0 || (finalDisplayPlans.length === 1 && finalDisplayPlans[0].isPureSingle && allSinglesComb.length === 0)) {
         let unsupportHerbs = [];
@@ -690,11 +727,11 @@ function runEducationalAnalysis() {
         }
         let failDiagnostic = `❌ 找不到能夠完全對應原藥材的等效方案。<br><br>`;
         if (unsupportHerbs.length > 0) {
-            failDiagnostic += `💡 <strong>診斷原因：</strong>目前處方包含無單味科中支援的成分：<span style="color:#d32f2f; font-weight:bold;">${unsupportHerbs.join(', ')}</span>。請嘗試切換至「結構啟發」面板！`;
+            failDiagnostic += `💡 <strong>診斷原因：</strong>目前處方包含無單味科中支援的成分：<span style="color:#d32f2f; font-weight:bold;">${unsupportHerbs.join(', ')}</span>。導致等效劑量矩陣無法閉合。請嘗試切換至「結構啟發」面板觀看骨架建議！`;
         } else {
-            failDiagnostic += `💡 <strong>診斷原因：</strong>勾選的限制過窄或開啟了純素模式，現有庫存無法覆蓋生藥種類。`;
+            failDiagnostic += `💡 <strong>診斷原因：</strong>勾選的廠牌與劑型限制過窄或開啟了純素模式，現有庫存無法覆蓋生藥種類。`;
         }
-        optList.innerHTML = `<p style="color:#d32f2f; line-height:1.6; font-size:14px;">${failDiagnostic}</p>`;
+        if(optList) optList.innerHTML = `<p style="color:#d32f2f; line-height:1.6; font-size:14px;">${failDiagnostic}</p>`;
     } else {
         finalDisplayPlans.forEach((plan, index) => {
             let itemsHtml = '';
@@ -710,7 +747,7 @@ function runEducationalAnalysis() {
                     </div>`;
             });
 
-            optList.innerHTML += `
+            if(optList) optList.innerHTML += `
                 <div class="plan-card">
                     <div class="plan-header">
                         <span class="plan-title">方案 ${index + 1}：${plan.title}</span>
@@ -722,6 +759,7 @@ function runEducationalAnalysis() {
     }
 
     let structuralPlans = [];
+    
     let unifiedCandidates = formulas.map(f => {
         let surplus = f.herbArray.filter(h => !targetHerbNames.includes(h));
         let matchCount = f.herbArray.filter(h => targetHerbNames.includes(h)).length;
@@ -761,8 +799,11 @@ function runEducationalAnalysis() {
             let missingSingles = []; 
             for(let h of missing) {
                 let sh = getSingleHerbItem(h);
-                if(!sh) missingSingles.push(h); 
-                else singlesToUse.push(sh);
+                if(!sh) { 
+                    missingSingles.push(h); 
+                } else {
+                    singlesToUse.push(sh);
+                }
             }
             structuralPlans.push({
                 formulas: [f1], singles: singlesToUse, minusHerbs: surplus, missingSingles: missingSingles,
@@ -777,6 +818,7 @@ function runEducationalAnalysis() {
         let f1 = topCandidates[i];
         for(let j=i+1; j<topCandidates.length; j++) {
             let f2 = topCandidates[j];
+            
             if (getCleanDisplayName(f1.name) === getCleanDisplayName(f2.name)) continue;
 
             let combinedHerbs = new Set(f1.herbArray);
@@ -792,8 +834,11 @@ function runEducationalAnalysis() {
                 let missingSingles = [];
                 for(let h of missing) {
                     let sh = getSingleHerbItem(h);
-                    if(!sh) missingSingles.push(h); 
-                    else singlesToUse.push(sh);
+                    if(!sh) { 
+                        missingSingles.push(h); 
+                    } else {
+                        singlesToUse.push(sh);
+                    }
                 }
                 structuralPlans.push({
                     formulas: [f1, f2], singles: singlesToUse, minusHerbs: surplus, missingSingles: missingSingles,
@@ -812,7 +857,10 @@ function runEducationalAnalysis() {
         let msSig = plan.missingSingles.sort().join(','); 
         return fSig + " | " + mSig + " | " + sSig + " | " + msSig;
     }
-    function getPlanFormulaConcepts(plan) { return plan.formulas.map(f => f.herbArray.join(',')); }
+    
+    function getPlanFormulaConcepts(plan) {
+        return plan.formulas.map(f => f.herbArray.join(','));
+    }
 
     let deduplicatedPlans = [];
     let seenSignatures = new Set();
@@ -824,7 +872,9 @@ function runEducationalAnalysis() {
         }
     }
 
-    const currentMode = document.getElementById('analysisModeSelect').value;
+    const modeSelect = document.getElementById('analysisModeSelect');
+    const currentMode = modeSelect ? modeSelect.value : 'compact';
+    
     if (currentMode === 'compact') {
         deduplicatedPlans.sort((a, b) => {
             if(a.totalItems !== b.totalItems) return a.totalItems - b.totalItems;
@@ -834,6 +884,7 @@ function runEducationalAnalysis() {
         deduplicatedPlans.sort((a, b) => {
             let costA = (a.formulas.length > 1 ? 2 : 0) + (a.singles.length * 1.5) + (a.minusHerbs.length * 5) + (a.missingSingles.length * 10);
             let costB = (b.formulas.length > 1 ? 2 : 0) + (b.singles.length * 1.5) + (b.minusHerbs.length * 5) + (b.missingSingles.length * 10);
+            
             if (Math.abs(costA - costB) < 2) return b.formulaHerbCount - a.formulaHerbCount;
             return costA - costB;
         });
@@ -846,6 +897,7 @@ function runEducationalAnalysis() {
     for(let p of deduplicatedPlans) {
         let concepts = getPlanFormulaConcepts(p);
         let isCompletelyRedundant = concepts.every(c => usedFormulaConcepts.has(c));
+        
         if(!isCompletelyRedundant) {
             finalDiversePlans.push(p);
             concepts.forEach(c => usedFormulaConcepts.add(c));
@@ -863,36 +915,57 @@ function runEducationalAnalysis() {
     }
 
     const structList = document.getElementById('structuralList');
-    structList.innerHTML = '';
+    if(structList) structList.innerHTML = '';
     
     if (finalDiversePlans.length === 0) {
-        structList.innerHTML = `<p style="color:#d32f2f;">無法生成結構啟發：查無合適的對應方劑。</p>`;
+        if(structList) structList.innerHTML = `<p style="color:#d32f2f;">無法生成結構啟發：查無合適的對應方劑。</p>`;
     } else {
         finalDiversePlans.forEach((plan, index) => {
             let tagsHtml = '';
+            
             plan.formulas.forEach(f => {
                 tagsHtml += `<div class="tag-formula has-hover" onclick="toggleMobileCard(this)">📦 ${getCleanDisplayName(f.name)}${getHoverCardHTML(f)}</div>`;
             });
+            
             if (plan.minusHerbs.length > 0) {
                 tagsHtml += `<span style="color:#ccc; line-height:28px;">-</span>`;
-                plan.minusHerbs.forEach(mh => { tagsHtml += `<div class="tag-minus">❌ 去 ${mh}</div>`; });
+                plan.minusHerbs.forEach(mh => {
+                    tagsHtml += `<div class="tag-minus">❌ 去 ${mh}</div>`;
+                });
             }
+            
             if (plan.singles.length > 0) {
                 tagsHtml += `<span style="color:#ccc; line-height:28px;">+</span>`;
-                plan.singles.forEach(s => { tagsHtml += `<div class="tag-single has-hover" onclick="toggleMobileCard(this)">🌿 ${getCleanDisplayName(s.name)}${getHoverCardHTML(s)}</div>`; });
+                plan.singles.forEach(s => {
+                    tagsHtml += `<div class="tag-single has-hover" onclick="toggleMobileCard(this)">🌿 ${getCleanDisplayName(s.name)}${getHoverCardHTML(s)}</div>`;
+                });
             }
+
             if (plan.missingSingles && plan.missingSingles.length > 0) {
                 tagsHtml += `<span style="color:#ccc; line-height:28px;">+</span>`;
-                plan.missingSingles.forEach(ms => { tagsHtml += `<div class="tag-single" style="background:#fff3cd; color:#856404; border-color:#ffeeba; cursor:not-allowed;">⚠️ 缺 ${ms}</div>`; });
+                plan.missingSingles.forEach(ms => {
+                    tagsHtml += `<div class="tag-single" style="background:#fff3cd; color:#856404; border-color:#ffeeba; cursor:not-allowed;">⚠️ 缺 ${ms}</div>`;
+                });
             }
-            let headerText = plan.isSubtraction ? `啟發思路 ${index + 1}：經典加減法 (步驟：${plan.totalItems})` : `啟發思路 ${index + 1}：精簡疊加骨架 (共 ${plan.totalItems} 品項)`;
-            structList.innerHTML += `<div class="struct-card"><div class="struct-header">${headerText}</div><div class="struct-tags">${tagsHtml}</div></div>`;
+            
+            let headerText = plan.isSubtraction ? 
+                `啟發思路 ${index + 1}：經典加減法 (概念步驟：${plan.totalItems})` : 
+                `啟發思路 ${index + 1}：精簡疊加骨架 (共 ${plan.totalItems} 品項)`;
+
+            if(structList) structList.innerHTML += `
+                <div class="struct-card">
+                    <div class="struct-header">${headerText}</div>
+                    <div class="struct-tags">${tagsHtml}</div>
+                </div>`;
         });
     }
 
-    let activeTabId = document.querySelector('.tab-btn.active').id;
+    let activeTabId = document.querySelector('.tab-btn.active') ? document.querySelector('.tab-btn.active').id : 'tabStrict';
     let activeTab = activeTabId === 'tabStructure' ? 'structure' : 'strict';
-    document.getElementById('analysisResultArea').style.display = 'block';
+    
+    const analysisArea = document.getElementById('analysisResultArea');
+    if(analysisArea) analysisArea.style.display = 'block';
+    
     switchTab(activeTab); 
 }
 
@@ -905,14 +978,20 @@ function applyPlan(index) {
     if (!selectedPlan) return;
 
     prescription = [];
-    selectedPlan.combination.forEach(c => { prescription.push({ ...c.item, dose: c.dose }); });
+    selectedPlan.combination.forEach(c => {
+        prescription.push({ ...c.item, dose: c.dose });
+    });
     if (currentUIMode === 'clinical') prescriptionClinical = prescription;
     else prescriptionLearning = prescription;
 
     renderPrescription();
     calculateResult();
-    document.getElementById('analysisResultArea').style.display = 'none';
+    
+    const analysisArea = document.getElementById('analysisResultArea');
+    if(analysisArea) analysisArea.style.display = 'none';
+    
     alert("✅ 已成功替換為教學建議處方！");
 }
 
+// 啟動系統
 loadCloudDatabase();
