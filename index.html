@@ -3,16 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    
     <title>科學中藥原藥材換算與臨床教學平台(測試版)</title>
     <meta name="description" content="專為中醫師與調劑人員打造的「科學中藥原藥材換算平台」。支援各廠牌科中精準換算、同物異名合併、毒劇藥安全把關，並內建方劑加減教學推薦系統，提升臨床開藥精準度。">
-    <meta name="keywords" content="科學中藥,科中換算,原藥材換算,中藥劑量計算,科中單複方,科學中藥賦形劑,中醫教學,方劑加減,小巴中醫,陳建中醫師,中醫師輔助工具,處方優化">
     <meta name="author" content="小巴親子中醫, 陳建中醫師">
-    
-    <meta property="og:title" content="科學中藥原藥材換算與臨床教學平台(測試版)">
-    <meta property="og:description" content="支援各廠牌科中劑量精準換算、十八反防呆與方劑雷達反向推導，臨床開藥輔助利器。">
-    <meta property="og:type" content="website">
-
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-0WMG9NCPX5"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -20,9 +13,7 @@
       gtag('js', new Date());
       gtag('config', 'G-0WMG9NCPX5');
     </script>
-
     <link rel="stylesheet" href="style.css">
-    
     <script src="papaparse.min.js"></script>
 </head>
 <body>
@@ -35,12 +26,12 @@
 
         <div id="statusMessage">正在載入本地端中藥資料庫，請稍候...</div>
 
-        <div class="mode-switch-container">
+        <div class="mode-switch-container" id="mainModeToggleBox">
             <button id="btnModeClinical" class="mode-btn active-clinical" onclick="switchMainMode('clinical')">💊 臨床換算模式</button>
             <button id="btnModeLearning" class="mode-btn" onclick="switchMainMode('learning')">🧠 單方學習模式</button>
         </div>
 
-        <div class="container">
+        <div class="container" id="mainUIContainer">
             <div class="column left-col">
                 
                 <div class="search-bar-wrapper">
@@ -48,7 +39,7 @@
                     <input type="text" id="searchInput" placeholder="點此搜尋 (支援空格或逗號分隔，如：葛根湯 麻黃...)" onkeyup="filterDrugs()">
                 </div>
                 
-                <details class="brand-filters-container">
+                <details class="brand-filters-container" id="filterBrandsBox">
                     <summary>🏢 廠牌篩選設定 (點擊收合 / 展開)</summary>
                     <div class="filters-actions">
                         <button class="btn-small" onclick="selectAllBrands(true)">全選</button>
@@ -57,30 +48,20 @@
                     <div class="brand-filters" id="brandCheckboxes"></div>
                 </details>
 
-                <details class="brand-filters-container">
+                <details class="brand-filters-container" id="filterCategoriesBox">
                     <summary>💊 劑型篩選設定 (預設已勾粉劑)</summary>
                     <div class="filters-actions">
                         <button class="btn-small" onclick="selectAllCategories(true)">全選</button>
                         <button class="btn-small" onclick="selectAllCategories(false)">全不選</button>
                     </div>
                     <div class="brand-filters" id="categoryCheckboxes"></div>
-                    
-                    <details class="category-wiki">
-                        <summary>💡 不清楚劑型的差異？點此查看「中藥劑型小百科」</summary>
-                        <div class="wiki-content">
-                            <h4>1. 散劑 (Powder)</h4><p>傳統打粉，保留所有實體成分。</p>
-                            <h4>2. 濃縮散劑 (Concentrated Powder)</h4><p>俗稱科學中藥，水煎萃取後加賦形劑乾燥成粉。</p>
-                            <h4>3. 濃縮顆粒劑 (Concentrated Granules)</h4><p>多一道「造粒」程序，流動性佳、易溶、不易嗆喉。</p>
-                            <h4>4. 濃縮細粒劑 (Concentrated Fine Granules)</h4><p>介於散劑與顆粒劑之間，兼具快溶與不飛散優點。</p>
-                        </div>
-                    </details>
                 </details>
                 
                 <div style="max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; margin-bottom: 20px;">
                     <ul class="drug-list" id="drugList"></ul>
                 </div>
 
-                <div style="margin-bottom: 15px; background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #ffd54f;">
+                <div id="safetyToggleBox" style="margin-bottom: 15px; background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #ffd54f;">
                     <div style="font-weight:bold; color:#f57f17; margin-bottom:8px; font-size:14px;">🛡️ 特殊族群用藥安全防呆 (預設關閉)</div>
                     <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                         <label style="font-size:14px; color:#4a148c; cursor:pointer; display:flex; align-items:center; gap:5px;">
@@ -99,11 +80,7 @@
 
                 <details class="opt-section" id="clinicalAnalysisSection">
                     <summary class="opt-title">🎓 AI 處方本質分析與教學推薦 <span style="font-size:13px; color:#666; font-weight:normal; margin-left:auto;">(點擊展開)</span></summary>
-                    <p style="font-size:12px; color:#666; margin:10px 0 10px 0;">
-                        深入分析疊方背後的「原藥材本質」，提供嚴謹的劑量等效方案，以及引入「加減法」思維的多變結構啟發。<br>
-                        <span style="color:#e65100; font-weight:bold; display:inline-block; margin-top:5px; padding:4px 8px; background:#fff3e0; border-radius:4px; border:1px solid #ffe0b2;">💡 系統預設：為減少重複方劑洗版，AI 分析引擎預設以「港香蘭」資料庫作為推導模擬基準。</span>
-                    </p>
-                    
+                    <p style="font-size:12px; color:#666; margin:10px 0 10px 0;">深入分析疊方背後的「原藥材本質」，提供嚴謹的劑量等效方案，以及引入「加減法」思維的多變結構啟發。</p>
                     <div style="margin-bottom: 12px; background: #e3f2fd; padding: 10px; border-radius: 4px; border: 1px solid #bbdefb; display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
                         <label style="font-size:14px; color:#0d47a1; font-weight:bold; cursor:pointer; width: 100%;">
                             🧠 AI 結構分析模式：
@@ -113,58 +90,48 @@
                             </select>
                         </label>
                     </div>
-
-                    <div style="margin-bottom: 12px; background: #e8f5e9; padding: 8px; border-radius: 4px; border: 1px solid #c8e6c9;">
-                        <label style="font-size:14px; color:#2e7d32; font-weight:bold; cursor:pointer; display: flex; align-items: center; gap: 8px;">
-                            <input type="checkbox" id="veganModeToggle" style="width:18px; height:18px;" onchange="runEducationalAnalysis()">
-                            🌱 純素友善模式 (過濾動物性方藥)
-                        </label>
-                    </div>
-
                     <button class="add-btn" style="background-color:#0288d1; width:100%; font-size:16px;" onclick="runEducationalAnalysis()">🧠 啟動臨床處方深度分析</button>
-                    
                     <div id="analysisResultArea" style="display:none; margin-top:15px; border-top:1px solid #b3e5fc; padding-top:15px;">
                         <div class="tab-container">
                             <button class="tab-btn active" id="tabStrict" onclick="switchTab('strict')">⚖️ 嚴謹劑量等效方案</button>
                             <button class="tab-btn" id="tabStructure" onclick="switchTab('structure')">🧭 結構方義啟發 (加減法)</button>
                         </div>
-                        <div id="strictPlansArea">
-                            <p style="font-size:13px; color:#01579b; margin-top:0;">尋找完全對應原藥材「克數誤差極小」的替代方案。</p>
-                            <div id="optimizedList"></div>
-                        </div>
-                        <div id="structurePlansArea" style="display:none;">
-                            <p style="font-size:13px; color:#e65100; margin-top:0;">導入經典中醫的「加減方」思維，展現最符合本質與視野分歧的思路 (固定輸出 5 組參考)。</p>
-                            <div id="structuralList"></div>
-                        </div>
+                        <div id="strictPlansArea"><div id="optimizedList"></div></div>
+                        <div id="structurePlansArea" style="display:none;"><div id="structuralList"></div></div>
                     </div>
                 </details>
             </div>
 
             <div class="column right-col">
-                
                 <div id="clinicalResultBox">
                     <h3>📊 原藥材換算結果</h3>
                     <p style="font-size: 13px; color: #666;">此為您開立處方的「原藥材本質」。各藥材下方標示其來源方劑縮寫。</p>
                     <ul class="result-list" id="resultList"></ul>
-                    
                     <div id="incompatAlertBox" class="incompat-alert-box"></div>
-                    
                     <div class="total-weight" id="totalWeightDisplay" style="border-top: 2px solid #333; padding-top:10px;">總生藥重量: 0.00 g</div>
                 </div>
 
                 <div id="learningRadarBox" style="display:none;">
                     <h3>💡 單方學習模式 (方義反推)</h3>
-                    <p style="font-size: 13px; color: #666;">系統會根據您左側輸入的藥物，即時比對資料庫，反推最可能的經典方義與劑量結構。</p>
-                    
+                    <p style="font-size: 13px; color: #666;">系統將以「港香蘭」與「莊松榮」兩大藥廠之標準方劑庫為基準，為您反推最可能的經典方義。</p>
                     <div style="background: #f4f6f7; padding: 10px; border-radius: 6px; font-size:13px; margin-bottom:15px; color:#555;">
-                        <strong>當前偵測藥材：</strong> <span id="radarTargetHerbs" style="color:#8e44ad; font-weight:bold;">無</span>
+                        <strong>當前偵測單方：</strong> <span id="radarTargetHerbs" style="color:#8e44ad; font-weight:bold;">無</span>
                     </div>
-
                     <div id="radarResultsList">
                         <p style="color:#888; text-align:center; padding: 20px;">請在左側搜尋並加入單方，<br>雷達將自動啟動掃描。</p>
                     </div>
                 </div>
+            </div>
+        </div>
 
+        <div class="container" id="statsUIContainer" style="display:none; flex-direction:column; max-width:800px;">
+            <div class="column" style="width:100%;">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; margin-bottom: 20px;">
+                    <h2 style="margin:0; color:#2c3e50;">📊 資料庫單味藥物頻率統計</h2>
+                    <button class="apply-btn" onclick="switchMainMode('clinical')">🔙 返回臨床系統</button>
+                </div>
+                <p style="color:#666; font-size:14px;">此清單列出資料庫中「所有複方」所包含的單味生藥，並依據<strong>注音符號</strong>自動排序。<br>此功能可協助開發者找出是否有未合併的異名（如同時代出現「當歸」與「當歸身」）。</p>
+                <div id="statsListArea" class="stats-grid"></div>
             </div>
         </div>
     </div>
@@ -175,32 +142,31 @@
                 <h4>💡 系統資訊</h4>
                 <p style="font-weight: bold; color:#fff;">科學中藥原藥材換算與臨床教學平台 (測試版)</p>
                 <p>專為中醫師打造的臨床精準換算輔助、與 AI 方義反推學習工具。</p>
-                <p style="margin-top: 20px; font-size: 12px; color: #7f8c8d;">&copy; 2026 小巴親子中醫 & 陳建中醫師.<br>All rights reserved.</p>
             </div>
-
             <div class="footer-col">
                 <h4>📚 權威資料與警示參考</h4>
                 <ul>
                     <li><a href="https://service.mohw.gov.tw/DOCMAP/CusSite/TCMLQueryForm.aspx" target="_blank">▸ 衛福部中藥藥品許可證查詢系統</a></li>
-                    <li><a href="https://www.check-antidoping.org.tw/inquiry.php?category=3" target="_blank">▸ 運動禁藥基準：運動禁藥管制基金會 (CTADA)</a></li>
-                    <li><a href="https://www.hpa.gov.tw/" target="_blank">▸ 蠶豆症警示：衛生福利部國民健康署指引</a></li>
+                    <li><a href="https://www.check-antidoping.org.tw/inquiry.php?category=3" target="_blank">▸ 運動禁藥基準 (CTADA)</a></li>
+                    <li><a href="https://www.hpa.gov.tw/" target="_blank">▸ 蠶豆症警示 (國健署)</a></li>
                 </ul>
             </div>
-
             <div class="footer-col">
                 <h4>🔗 開發團隊與社群</h4>
                 <div class="footer-links-vertical">
                     <a href="https://drsmall8.com/" target="_blank">🌐 小巴中醫 官方網站</a>
                     <a href="https://www.facebook.com/DrSmall8" target="_blank">📘 鄭育昕 (小巴醫師) FB</a>
-                    <a href="https://www.facebook.com/DrChienChien/" target="_blank">📘 陳建中醫師 FB</a>
                 </div>
             </div>
         </div>
 
         <div class="feedback-box">
             <p style="margin: 0 0 10px 0; color: #81d4fa; font-weight: bold; font-size: 15px;">🐛 系統公測中，需要您的協助！</p>
-            <p style="margin: 0 0 15px 0; font-size: 13px; color: #bdc3c7; line-height: 1.6;">若您在測試過程中有任何功能建議，歡迎至專屬頁面留言，讓我們一起把系統調校到最好：</p>
             <a href="https://drsmall8.com/calc/" target="_blank" class="footer-link-btn" style="background: #0277bd; color: white; border: none; display: inline-block;">🛠️ 前往除錯與建議留言區</a>
+            
+            <div style="margin-top: 20px; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 15px;">
+                <button onclick="switchMainMode('stats')" style="background:transparent; color:#7f8c8d; border:1px solid #7f8c8d; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:12px;">⚙️ 開發者工具：單味藥頻率透視</button>
+            </div>
         </div>
     </div>
 
