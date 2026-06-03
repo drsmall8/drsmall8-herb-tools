@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    <title>科學中藥原藥材換算平台(測試版)</title>
+    <title>科學中藥原藥材換算與臨床教學平台(測試版)</title>
     <meta name="description" content="專為中醫師與調劑人員打造的「科學中藥原藥材換算平台」。支援各廠牌科中精準換算、同物異名合併、毒劇藥安全把關，並內建方劑加減教學推薦系統，提升臨床開藥精準度。">
     <meta name="keywords" content="科學中藥,科中換算,原藥材換算,中藥劑量計算,科中單複方,科學中藥賦形劑,中醫教學,方劑加減,小巴中醫,陳建中醫師,中醫師輔助工具,處方優化">
     <meta name="author" content="小巴親子中醫, 陳建中醫師">
     
-    <meta property="og:title" content="科學中藥原藥材換算平台(測試版)">
-    <meta property="og:description" content="支援各廠牌科中劑量精準換算、毒劇藥把關與方劑結構重組推薦，臨床開藥輔助利器。">
+    <meta property="og:title" content="科學中藥原藥材換算與臨床教學平台(測試版)">
+    <meta property="og:description" content="支援各廠牌科中劑量精準換算、十八反防呆與方劑雷達反向推導，臨床開藥輔助利器。">
     <meta property="og:type" content="website">
 
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-0WMG9NCPX5"></script>
@@ -21,146 +21,31 @@
       gtag('config', 'G-0WMG9NCPX5');
     </script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <style>
-        * { box-sizing: border-box; }
-        body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; display: flex; flex-direction: column; min-height: 100vh;}
-        .header { text-align: center; margin-bottom: 20px; color: #2c3e50; }
-        .header h1 { margin-bottom: 10px; }
-        .header p { margin-top: 0; color: #666; }
-        
-        .main-content { flex: 1; }
-        .container { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; align-items: flex-start; }
-        .column { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .left-col { flex: 1.2; }
-        .right-col { flex: 0.8; background-color: #fafbfc; position: sticky; top: 20px; }
-        
-        input, select, button { padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
-        
-        /* 霸氣置頂的搜尋欄位樣式 */
-        .search-bar-wrapper { position: relative; margin-bottom: 20px; }
-        .search-bar-wrapper input { width: 100%; padding: 14px 15px 14px 45px; font-size: 16px; border: 2px solid #0288d1; border-radius: 8px; box-shadow: 0 4px 6px rgba(2, 136, 209, 0.1); transition: 0.3s;}
-        .search-bar-wrapper input:focus { outline: none; box-shadow: 0 4px 12px rgba(2, 136, 209, 0.3); }
-        .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); font-size: 20px; color: #0288d1; pointer-events: none;}
-        
-        /* 可收合的篩選器樣式 */
-        .brand-filters-container { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 10px 15px; margin-bottom: 15px; }
-        .brand-filters-container summary { font-size: 15px; font-weight: bold; cursor: pointer; outline: none; color: #2c3e50; display: flex; align-items: center; user-select: none; }
-        .brand-filters-container summary:hover { color: #0288d1; }
-        .filters-actions { margin: 10px 0; }
-        .brand-filters { display: flex; flex-wrap: wrap; gap: 10px; max-height: 150px; overflow-y: auto; font-size: 14px; padding-top: 5px;}
-        .brand-filters label { display: flex; align-items: center; cursor: pointer; background: #fff; padding: 6px 10px; border-radius: 20px; border: 1px solid #ddd; transition: 0.2s;}
-        .brand-filters label:hover { background: #eef2f5; }
-        .brand-count { color: #888; font-size: 12px; margin-left: 4px; }
-        
-        .category-wiki { margin-top: 10px; background: #e3f2fd; border: 1px solid #bbdefb; border-radius: 6px; font-size: 13px; }
-        .category-wiki summary { padding: 10px; font-weight: bold; color: #0277bd; cursor: pointer; user-select: none; outline: none; }
-        .category-wiki summary:hover { background: #bbdefb; border-radius: 6px; }
-        .wiki-content { padding: 0 15px 15px 15px; color: #444; line-height: 1.6; }
-        .wiki-content h4 { color: #01579b; margin: 10px 0 5px 0; border-bottom: 1px dashed #bbdefb; padding-bottom: 4px;}
-        .wiki-content p { margin: 4px 0; }
-
-        .btn-small { padding: 4px 12px; font-size: 14px; cursor: pointer; background: #6c757d; color: white; border: none; border-radius: 4px; }
-        .btn-small:hover { background: #5a6268; }
-
-        /* 💡 讓 AI 分析區塊也可收合 */
-        .opt-section { background: #fff; border: 2px dashed #0288d1; padding: 15px; border-radius: 8px; margin-top: 20px; }
-        .opt-title { font-weight: bold; color: #0277bd; display: flex; align-items: center; gap: 5px; font-size: 16px; cursor: pointer; user-select: none; outline: none;}
-        .opt-title:hover { color: #01579b; }
-        
-        .plan-card { background: #f8fbff; border: 1px solid #b3e5fc; border-radius: 6px; padding: 12px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .plan-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e1f5fe; padding-bottom: 8px; margin-bottom: 8px; }
-        .plan-title { font-weight: bold; color: #0277bd; font-size: 15px; }
-        .plan-item { display: flex; justify-content: space-between; font-size: 14px; padding: 6px 0; border-bottom: 1px dashed #eee; align-items: center;}
-        .plan-item:last-child { border-bottom: none; }
-
-        .struct-card { background: #fff8e1; border: 1px solid #ffecb3; border-radius: 6px; padding: 12px; margin-bottom: 10px; }
-        .struct-header { font-weight: bold; color: #f57f17; font-size: 14px; margin-bottom: 8px; border-bottom: 1px dashed #ffe082; padding-bottom: 4px;}
-        .struct-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center;}
-        
-        .tag-formula { background: #ffcc80; color: #e65100; padding: 4px 8px; border-radius: 12px; font-size: 13px; font-weight: bold; border: 1px solid #ffa726; cursor: help;}
-        .tag-single { background: #fff3e0; color: #ef6c00; padding: 4px 8px; border-radius: 12px; font-size: 13px; border: 1px solid #ffe0b2; cursor: help;}
-        .tag-minus { background: #ffebee; color: #c62828; padding: 4px 8px; border-radius: 12px; font-size: 13px; font-weight: bold; border: 1px solid #ffcdd2; cursor: default; }
-        .tag-animal { background: #ffe0b2; color: #d84315; padding: 2px 6px; border-radius: 6px; font-size: 11px; margin-left: 6px; border: 1px solid #ffb74d; }
-
-        .drug-list, .prescription-list, .result-list { list-style: none; padding: 0; margin: 0; }
-        .drug-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; position: relative; }
-        .drug-item:hover { background-color: #f9f9f9; }
-        
-        .has-hover { position: relative; cursor: help; }
-        .hover-card {
-            display: none; position: absolute; left: 0; top: 100%; width: max-content; max-width: 300px; z-index: 999;
-            background: #fff; border: 1px solid #2c3e50; border-radius: 6px; padding: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.25); font-size: 13px; line-height: 1.6; color: #333; text-align: left;
-        }
-        @media (hover: hover) { .has-hover:hover .hover-card { display: block; } }
-        .hover-card-title { font-weight: bold; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 4px; margin-bottom: 6px; }
-        .hover-card p { margin: 3px 0; }
-
-        .add-btn { background-color: #4CAF50; color: white; border: none; cursor: pointer; padding: 8px 15px; border-radius:4px; font-weight: bold; white-space: nowrap;}
-        .add-btn:hover { background-color: #45a049; }
-        .remove-btn { background-color: #f44336; color: white; border: none; cursor: pointer; padding: 8px 12px; border-radius:4px; font-weight: bold;}
-        .apply-btn { background-color: #0288d1; color: white; border: none; cursor: pointer; padding: 6px 12px; border-radius:4px; font-size: 13px; font-weight: bold;}
-        
-        .presc-item { background: #e8f4f8; padding: 12px; margin-bottom: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;}
-        .presc-item-info { flex: 1; min-width: 150px;}
-        .presc-item-controls { display: flex; align-items: center; gap: 8px; }
-        .presc-item input { width: 80px; text-align: center; font-size: 16px; font-weight: bold; color: #2c3e50;}
-        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type=number] { -moz-appearance: textfield; }
-
-        .result-item { padding: 12px 0; border-bottom: 1px dashed #ccc; display: flex; justify-content: space-between; font-weight: bold; align-items: flex-start;}
-        .result-item-left { flex: 1; }
-        .result-item-right { white-space: nowrap; padding-left: 10px;}
-        .source-abbr { display: inline-block; font-size: 11px; color: #888; background: #eee; padding: 2px 6px; border-radius: 4px; margin-top: 4px; margin-right: 4px; font-weight: normal;}
-
-        .toxic-alert { color: #d32f2f; font-size: 12px; display: block; margin-top: 3px; font-weight: normal;} 
-        .niuxi-alert { color: #e67e22; font-size: 12px; display: block; margin-top: 3px; font-weight: normal;}
-        .total-weight { font-size: 18px; color: #d32f2f; margin-top: 15px; text-align: right; font-weight: bold;}
-        
-        #statusMessage { background: #fff3cd; color: #856404; padding: 12px; text-align: center; border-radius: 4px; margin-bottom: 15px; font-weight: bold; }
-        .warning-bg { background-color: #ffebee !important; }
-        .warning-text { color: #d32f2f !important; }
-
-        .tab-container { display: flex; margin-bottom: 15px; border-bottom: 2px solid #ddd; }
-        .tab-btn { flex: 1; padding: 10px; text-align: center; cursor: pointer; font-weight: bold; color: #666; background: #f8f9fa; border: none; outline: none;}
-        .tab-btn.active { color: #0277bd; border-bottom: 3px solid #0277bd; background: #fff; }
-
-        .platform-footer { margin-top: 40px; padding: 30px 20px; background-color: #2c3e50; color: #ecf0f1; text-align: center; font-size: 14px; border-top: 4px solid #0288d1;}
-        .platform-footer a { color: #81d4fa; text-decoration: none; transition: 0.3s; }
-        .platform-footer a:hover { color: #fff; text-decoration: underline; }
-        .footer-links { margin: 15px 0; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
-        .footer-link-btn { background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); }
-        .footer-link-btn:hover { background: rgba(255,255,255,0.2); text-decoration: none !important;}
-        
-        .feedback-box { margin: 25px auto 10px auto; max-width: 650px; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.3); }
-
-        @media (max-width: 768px) {
-            .header h1 { font-size: 22px; line-height: 1.3; } 
-            .header p { font-size: 13px; margin-top: 5px; }
-            .container { flex-direction: column; gap: 15px; }
-            .column { width: 100%; padding: 15px; }
-            .right-col { position: relative; top: 0; } 
-            #analysisModeSelect { max-width: 100%; white-space: normal; word-break: break-word; }
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="papaparse.min.js"></script>
 </head>
 <body>
 
     <div class="main-content">
         <div class="header">
-            <h1>科學中藥原藥材換算平台(測試版)</h1>
-            <p>支援同物異名合併、毒劇藥與動物藥把關、教學加減方重組</p>
+            <h1>科學中藥原藥材換算平台</h1>
+            <p>臨床處方優化 ✕ AI 學習系統</p>
         </div>
 
-        <div id="statusMessage">正在從 Google 雲端載入最新中藥資料庫，請稍候...</div>
+        <div id="statusMessage">正在載入本地端中藥資料庫，請稍候...</div>
+
+        <div class="mode-switch-container">
+            <button id="btnModeClinical" class="mode-btn active-clinical" onclick="switchMainMode('clinical')">💊 臨床換算模式</button>
+            <button id="btnModeLearning" class="mode-btn" onclick="switchMainMode('learning')">🧠 單方學習模式</button>
+        </div>
 
         <div class="container">
             <div class="column left-col">
                 
                 <div class="search-bar-wrapper">
                     <span class="search-icon">🔍</span>
-                    <input type="text" id="searchInput" placeholder="請先點此搜尋藥名、注音簡稱或許可證字號..." onkeyup="filterDrugs()">
+                    <input type="text" id="searchInput" placeholder="點此搜尋 (支援空格或逗號分隔，如：葛根湯 麻黃...)" onkeyup="filterDrugs()">
                 </div>
                 
                 <details class="brand-filters-container">
@@ -183,21 +68,10 @@
                     <details class="category-wiki">
                         <summary>💡 不清楚劑型的差異？點此查看「中藥劑型小百科」</summary>
                         <div class="wiki-content">
-                            <h4>1. 散劑 (Powder)</h4>
-                            <p><strong>製作定義：</strong>將一種或多種中藥原藥材經過乾燥、直接粉碎，並混合均勻所製成的粉末狀製劑。</p>
-                            <p><strong>特性：</strong>這是最傳統的劑型，沒有經過水煎煮與萃取的過程，保留了藥材所有的實體成分。通常用於貴重藥材（如人參、珍珠）、芳香類容易揮發的藥材（如冰片、蘇合香），或是難以溶於水的礦物類藥材。</p>
-                            
-                            <h4>2. 濃縮散劑 (Concentrated Powder)</h4>
-                            <p><strong>製作定義：</strong>將中藥材加水（或適當溶媒）依標準比例煎煮萃取後，取其藥湯濃縮成浸膏，接著加入法定的「賦形劑」（如澱粉、乳糖，或是原方藥材的細粉）進行乾燥、粉碎與均勻混合，製成粉末狀。</p>
-                            <p><strong>特性：</strong>屬於現代俗稱的「科學中藥」。因為經過萃取與濃縮，去除了藥渣，藥效成分較為集中，患者每次服用的體積與重量會比傳統散劑少。直接以溫水送服即可，免去自行煎藥的麻煩。</p>
-
-                            <h4>3. 濃縮顆粒劑 (Concentrated Granules)</h4>
-                            <p><strong>製作定義：</strong>前段製程與「濃縮散劑」完全相同（煎煮、萃取、濃縮）。但在加入賦形劑乾燥後，會多一道「造粒 (Granulation)」的程序，透過機器將粉末壓製或噴霧結合成具有一定大小的均勻顆粒。</p>
-                            <p><strong>特性：</strong>因為是顆粒狀，流動性比粉末（散劑）好，倒出時不容易飛散（較無粉塵）。此外，顆粒劑的表面積與孔隙率經過設計，吸水性好，服用時不容易卡在喉嚨嗆到，也更容易在溫水中溶解。</p>
-
-                            <h4>4. 濃縮細粒劑 (Concentrated Fine Granules)</h4>
-                            <p><strong>製作定義：</strong>製程與「濃縮顆粒劑」相同，差別在於造粒時，透過篩網（Mesh）的控制，將成品的顆粒直徑大小（粒度）控制在一個比顆粒劑更小、但比散劑略大的特定範圍內。</p>
-                            <p><strong>特性：</strong>介於散劑與顆粒劑之間，是目前台灣許多大型中藥廠（如順天堂、莊松榮等）最常採用的科學中藥劑型。它兼具了散劑「容易快速溶解、好吸收」以及顆粒劑「流動性佳、不易飛散嗆喉」的雙重優點。</p>
+                            <h4>1. 散劑 (Powder)</h4><p>傳統打粉，保留所有實體成分。</p>
+                            <h4>2. 濃縮散劑 (Concentrated Powder)</h4><p>俗稱科學中藥，水煎萃取後加賦形劑乾燥成粉。</p>
+                            <h4>3. 濃縮顆粒劑 (Concentrated Granules)</h4><p>多一道「造粒」程序，流動性佳、易溶、不易嗆喉。</p>
+                            <h4>4. 濃縮細粒劑 (Concentrated Fine Granules)</h4><p>介於散劑與顆粒劑之間，兼具快溶與不飛散優點。</p>
                         </div>
                     </details>
                 </details>
@@ -206,12 +80,29 @@
                     <ul class="drug-list" id="drugList"></ul>
                 </div>
 
-                <h3>📝 目前處方 (點擊輸入一日克數)</h3>
+                <div style="margin-bottom: 15px; background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #ffd54f;">
+                    <div style="font-weight:bold; color:#f57f17; margin-bottom:8px; font-size:14px;">🛡️ 特殊族群用藥安全防呆 (預設關閉)</div>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <label style="font-size:14px; color:#4a148c; cursor:pointer; display:flex; align-items:center; gap:5px;">
+                            <input type="checkbox" id="g6pdToggle" style="width:16px; height:16px;" onchange="calculateResult()">
+                            🧬 蠶豆症 (G6PD) 警示
+                        </label>
+                        <label style="font-size:14px; color:#212121; cursor:pointer; display:flex; align-items:center; gap:5px;">
+                            <input type="checkbox" id="dopingToggle" style="width:16px; height:16px;" onchange="calculateResult()">
+                            🏃 運動員禁藥 (WADA) 警示
+                        </label>
+                    </div>
+                </div>
+
+                <h3>📝 目前處方 <span id="prescHint" style="font-size:13px; color:#666; font-weight:normal; display:none;">(學習模式下，可不輸入劑量)</span></h3>
                 <div id="prescriptionList"></div>
 
-                <details open class="opt-section">
-                    <summary class="opt-title">🎓 AI 處方本質分析與教學推薦 <span style="font-size:13px; color:#666; font-weight:normal; margin-left:auto;">(點擊收合 / 展開)</span></summary>
-                    <p style="font-size:12px; color:#666; margin:10px 0 10px 0;">深入分析疊方背後的「原藥材本質」，提供嚴謹的劑量等效方案，以及引入「加減法」思維的多變結構啟發。</p>
+                <details class="opt-section" id="clinicalAnalysisSection">
+                    <summary class="opt-title">🎓 AI 處方本質分析與教學推薦 <span style="font-size:13px; color:#666; font-weight:normal; margin-left:auto;">(點擊展開)</span></summary>
+                    <p style="font-size:12px; color:#666; margin:10px 0 10px 0;">
+                        深入分析疊方背後的「原藥材本質」，提供嚴謹的劑量等效方案，以及引入「加減法」思維的多變結構啟發。<br>
+                        <span style="color:#e65100; font-weight:bold; display:inline-block; margin-top:5px; padding:4px 8px; background:#fff3e0; border-radius:4px; border:1px solid #ffe0b2;">💡 系統預設：為減少重複方劑洗版，AI 分析引擎預設以「港香蘭」資料庫作為推導模擬基準。</span>
+                    </p>
                     
                     <div style="margin-bottom: 12px; background: #e3f2fd; padding: 10px; border-radius: 4px; border: 1px solid #bbdefb; display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
                         <label style="font-size:14px; color:#0d47a1; font-weight:bold; cursor:pointer; width: 100%;">
@@ -230,7 +121,7 @@
                         </label>
                     </div>
 
-                    <button class="add-btn" style="background-color:#0288d1; width:100%; font-size:16px;" onclick="runEducationalAnalysis()">🧠 啟提臨床處方深度分析</button>
+                    <button class="add-btn" style="background-color:#0288d1; width:100%; font-size:16px;" onclick="runEducationalAnalysis()">🧠 啟動臨床處方深度分析</button>
                     
                     <div id="analysisResultArea" style="display:none; margin-top:15px; border-top:1px solid #b3e5fc; padding-top:15px;">
                         <div class="tab-container">
@@ -250,778 +141,69 @@
             </div>
 
             <div class="column right-col">
-                <h3>📊 原藥材換算結果</h3>
-                <p style="font-size: 13px; color: #666;">此為您開立處方的「原藥材本質」。各藥材下方標示其來源方劑縮寫。</p>
-                <ul class="result-list" id="resultList"></ul>
-                <div class="total-weight" id="totalWeightDisplay" style="border-top: 2px solid #333; padding-top:10px;">總生藥重量: 0.00 g</div>
+                
+                <div id="clinicalResultBox">
+                    <h3>📊 原藥材換算結果</h3>
+                    <p style="font-size: 13px; color: #666;">此為您開立處方的「原藥材本質」。各藥材下方標示其來源方劑縮寫。</p>
+                    <ul class="result-list" id="resultList"></ul>
+                    
+                    <div id="incompatAlertBox" class="incompat-alert-box"></div>
+                    
+                    <div class="total-weight" id="totalWeightDisplay" style="border-top: 2px solid #333; padding-top:10px;">總生藥重量: 0.00 g</div>
+                </div>
+
+                <div id="learningRadarBox" style="display:none;">
+                    <h3>💡 單方學習模式 (方義反推)</h3>
+                    <p style="font-size: 13px; color: #666;">系統會根據您左側輸入的藥物，即時比對資料庫，反推最可能的經典方義與劑量結構。</p>
+                    
+                    <div style="background: #f4f6f7; padding: 10px; border-radius: 6px; font-size:13px; margin-bottom:15px; color:#555;">
+                        <strong>當前偵測藥材：</strong> <span id="radarTargetHerbs" style="color:#8e44ad; font-weight:bold;">無</span>
+                    </div>
+
+                    <div id="radarResultsList">
+                        <p style="color:#888; text-align:center; padding: 20px;">請在左側搜尋並加入單方，<br>雷達將自動啟動掃描。</p>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
 
     <div class="platform-footer">
-        <p style="margin: 0 0 10px 0; font-size: 16px;"><strong>科學中藥原藥材換算平台 (測試版)</strong></p>
-        <p style="margin: 5px 0;"><strong>底層資料來源：</strong><a href="https://service.mohw.gov.tw/DOCMAP/CusSite/TCMLQueryForm.aspx" target="_blank">衛福部中藥藥品許可證查詢系統</a></p>
-        <p style="margin: 5px 0;"><strong>系統開發與醫學架構：</strong>小巴親子中醫團隊 & 陳建中醫師</p>
-        
-        <div class="footer-links">
-            <a href="https://drsmall8.com/" target="_blank" class="footer-link-btn">🌐 小巴中醫官網</a>
-            <a href="https://www.facebook.com/DrSmall8" target="_blank" class="footer-link-btn">📘 小巴醫師 FB</a>
-            <a href="https://www.facebook.com/DrChienChien/" target="_blank" class="footer-link-btn">📘 陳建中醫師 FB</a>
+        <div class="footer-grid">
+            <div class="footer-col">
+                <h4>💡 系統資訊</h4>
+                <p style="font-weight: bold; color:#fff;">科學中藥原藥材換算與臨床教學平台 (測試版)</p>
+                <p>專為中醫師打造的臨床精準換算輔助、與 AI 方義反推學習工具。</p>
+                <p style="margin-top: 20px; font-size: 12px; color: #7f8c8d;">&copy; 2026 小巴親子中醫 & 陳建中醫師.<br>All rights reserved.</p>
+            </div>
+
+            <div class="footer-col">
+                <h4>📚 權威資料與警示參考</h4>
+                <ul>
+                    <li><a href="https://service.mohw.gov.tw/DOCMAP/CusSite/TCMLQueryForm.aspx" target="_blank">▸ 衛福部中藥藥品許可證查詢系統</a></li>
+                    <li><a href="https://www.check-antidoping.org.tw/inquiry.php?category=3" target="_blank">▸ 運動禁藥基準：運動禁藥管制基金會 (CTADA)</a></li>
+                    <li><a href="https://www.hpa.gov.tw/" target="_blank">▸ 蠶豆症警示：衛生福利部國民健康署指引</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4>🔗 開發團隊與社群</h4>
+                <div class="footer-links-vertical">
+                    <a href="https://drsmall8.com/" target="_blank">🌐 小巴中醫 官方網站</a>
+                    <a href="https://www.facebook.com/DrSmall8" target="_blank">📘 鄭育昕 (小巴醫師) FB</a>
+                    <a href="https://www.facebook.com/DrChienChien/" target="_blank">📘 陳建中醫師 FB</a>
+                </div>
+            </div>
         </div>
 
         <div class="feedback-box">
-            <p style="margin: 0 0 10px 0; color: #81d4fa; font-weight: bold; font-size: 16px;">🐛 系統公測中，需要您的協助！</p>
-            <p style="margin: 0 0 15px 0; font-size: 13px; color: #ecf0f1; line-height: 1.6;">若您在測試過程中有任何功能建議、或遇到奇怪的疊方組合（Bug），<br>歡迎至專屬頁面留言，讓我們一起把系統調校到最好：</p>
+            <p style="margin: 0 0 10px 0; color: #81d4fa; font-weight: bold; font-size: 15px;">🐛 系統公測中，需要您的協助！</p>
+            <p style="margin: 0 0 15px 0; font-size: 13px; color: #bdc3c7; line-height: 1.6;">若您在測試過程中有任何功能建議，歡迎至專屬頁面留言，讓我們一起把系統調校到最好：</p>
             <a href="https://drsmall8.com/calc/" target="_blank" class="footer-link-btn" style="background: #0277bd; color: white; border: none; display: inline-block;">🛠️ 前往除錯與建議留言區</a>
         </div>
-
-        <p style="font-size: 12px; color: #7f8c8d; margin-top: 20px;">&copy; 2026 小巴親子中醫 & 陳建中醫師. All rights reserved.</p>
     </div>
 
-    <script>
-        // ==========================================
-        // ⚠️ 第 1 步：請在下方雙引號內，貼上您的 Google 試算表 CSV 網址 ⚠️
-        // ==========================================
-        const googleSheetCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5wPHCM9ybm9133NpX9HgFee9chFqvpvr9J2yQG8NVpzVBVeZvkOkkXI6vgva32xs8C_c2SbI5lObD/pub?output=csv";
-
-        let database = []; 
-        let prescription = []; 
-        let globalFinalHerbs = {}; 
-        let generatedTeachingPlans = []; 
-
-        const herbDictionary = {
-            "甘草(炙)": "炙甘草", "甘草（炙）": "炙甘草", "蜜甘草": "炙甘草", "炙草": "炙甘草",
-            "乾薑": "乾薑", "薑(炮)": "炮薑", "炮薑": "炮薑",
-            "半夏(薑製)": "薑半夏", "半夏": "薑半夏", "製半夏": "薑半夏",
-            "大黃(酒製)": "大黃", "大黃(酒炒)": "大黃",
-            "苦蔘": "苦參", "苦蔘根": "苦參", "苦參根": "苦參",
-            "忍冬花": "金銀花", "銀花": "金銀花", "金銀花": "金銀花",
-            "鹿角": "鹿角膠",
-            "山梔子": "梔子",
-            "紫蘇": "紫蘇葉",
-            "乾生薑": "乾薑",
-            "天花粉": "栝樓根(天花粉)", "栝樓根": "栝樓根(天花粉)",
-            "蘆根": "葦根",
-            "芍藥": "白芍",
-            "大棗": "紅棗"
-        };
-        
-        const toxicAlerts = {
-            "附子": { max: 15.0 }, "炮附子": { max: 15.0 },
-            "麻黃": { max: 10.0 }, "細辛": { max: 3.0 },
-            "半夏": { max: 9.0 }, "大黃": { max: 15.0 }
-        };
-
-        const animalKeywords = ['龍骨', '牡蠣', '阿膠', '殭蠶', '蟬蛻', '龜板', '龜膠', '鹿角', '鹿膠', '蠍', '螵蛸', '雞子黃', '內金', '豬膽', '蛤蚧', '石決明', '蜈蚣', '地龍', '水蛭', '土鱉', '虻蟲', '斑蝥', '鱉甲', '穿山甲', '水牛角', '玳瑁', '海馬', '牛黃', '麝香', '靈脂', '夜明砂', '望月砂', '蠶砂', '紫河車'];
-
-        function isAnimalHerb(herbName) {
-            return animalKeywords.some(kw => herbName.includes(kw));
-        }
-
-        function normalizeHerbName(name) {
-            const cleanName = name.trim();
-            if (cleanName === "牛膝") return "牛膝(需確認川/懷)";
-            if (cleanName === "薑" || cleanName === "姜") return "薑(需確認生/乾)";
-            return herbDictionary[cleanName] || cleanName;
-        }
-
-        function parseHerbString(str) {
-            let obj = {};
-            let total = 0;
-            if (str) {
-                str.split('|').forEach(pair => {
-                    const kv = pair.split(':');
-                    if (kv.length === 2) {
-                        const name = normalizeHerbName(kv[0]);
-                        const w = parseFloat(kv[1]) || 0;
-                        obj[name] = (obj[name] || 0) + w;
-                        total += w;
-                    }
-                });
-            }
-            return { obj, total, displayStr: str.replace(/\|/g, ', ') || '無' };
-        }
-
-        function getHoverCardHTML(d) {
-            return `
-                <div class="hover-card" onclick="event.stopPropagation();">
-                    <div class="hover-card-title">🔍 楚河漢界解析詳情</div>
-                    <p><strong>許可證：</strong>${d.license}</p>
-                    <p><strong>濃縮倍數：</strong><span style="color:#e67e22; font-weight:bold;">${d.ratio > 0 ? d.ratio : '⚠️ 缺資料'}</span></p>
-                    <p><strong>濃縮生藥：</strong><span style="color:#27ae60;">${d.concDisplay}</span></p>
-                    <p><strong>原粉生藥：</strong><span style="color:#8e44ad;">${d.rawDisplay}</span></p>
-                    <p><strong>賦形劑/添加物：</strong><span style="color:#7f8c8d;">${d.excDisplay}</span></p>
-                </div>`;
-        }
-
-        function toggleMobileCard(element) {
-            if(window.innerWidth <= 768) {
-                const card = element.querySelector('.hover-card');
-                const isDisplayed = card.style.display === 'block';
-                document.querySelectorAll('.hover-card').forEach(c => c.style.display = 'none'); 
-                card.style.display = isDisplayed ? 'none' : 'block';
-            }
-        }
-
-        function loadCloudDatabase() {
-            const statusMessage = document.getElementById('statusMessage');
-            Papa.parse(googleSheetCsvUrl, {
-                download: true, header: true, skipEmptyLines: true,
-                complete: function(results) {
-                    let brandCounts = {}; 
-                    let categoryCounts = {}; 
-                    database = [];
-                    results.data.forEach((row, index) => {
-                        if (!row['顯示名稱']) return;
-                        const brand = row['藥廠'] || '未知藥廠';
-                        const category = row['分類標籤'] || '未知劑型';
-                        const ratio = parseFloat(row['濃縮倍數']) || 0;
-                        
-                        if(brand !== '其他藥廠' && brand !== '未知藥廠') {
-                            brandCounts[brand] = (brandCounts[brand] || 0) + 1;
-                        }
-                        categoryCounts[category] = (categoryCounts[category] || 0) + 1;
-                        
-                        const conc = parseHerbString(row['濃縮生藥組成']);
-                        const raw = parseHerbString(row['原粉生藥組成']);
-                        const exc = parseHerbString(row['賦形劑組成']);
-                        
-                        let herbArr = Object.keys({...conc.obj, ...raw.obj}).sort(); 
-
-                        database.push({
-                            id: index, license: row['許可證字號'] || '', brand: brand, name: row['顯示名稱'] || '',
-                            category: category, ratio: ratio,
-                            isWarning: (row['解析狀態'] || '').includes('⚠️'),
-                            concHerbs: conc.obj, concTotalWeight: conc.total, concDisplay: conc.displayStr,
-                            rawHerbs: raw.obj, rawTotalWeight: raw.total, rawDisplay: raw.displayStr,
-                            excObj: exc.obj, excTotalWeight: exc.total, excDisplay: exc.displayStr,
-                            herbArray: herbArr, 
-                            uniqueHerbCount: herbArr.length,
-                            bopomofo: row['注音簡稱'] || ''
-                        });
-                    });
-                    
-                    populateBrandCheckboxes(brandCounts);
-                    populateCategoryCheckboxes(categoryCounts);
-                    statusMessage.style.backgroundColor = "#d4edda"; 
-                    statusMessage.style.color = "#155724";
-                    statusMessage.innerHTML = `✅ 成功連線。載入 <strong>${database.length}</strong> 筆精準純化資料。`;
-                    filterDrugs(); 
-                }
-            });
-        }
-
-        function populateBrandCheckboxes(counts) {
-            const container = document.getElementById('brandCheckboxes');
-            container.innerHTML = '';
-            Object.keys(counts).sort((a, b) => counts[b] - counts[a]).forEach(b => {
-                container.innerHTML += `<label><input type="checkbox" value="${b}" class="brand-cb" onchange="filterDrugs()" checked> ${b} <span class="brand-count">(${counts[b]})</span></label>`;
-            });
-        }
-
-        function populateCategoryCheckboxes(counts) {
-            const container = document.getElementById('categoryCheckboxes');
-            container.innerHTML = '';
-            const defaultChecked = ['濃縮散劑', '濃縮顆粒劑', '濃縮細粒劑', '散劑'];
-            Object.keys(counts).sort((a, b) => counts[b] - counts[a]).forEach(c => {
-                const isChecked = defaultChecked.includes(c) ? 'checked' : '';
-                container.innerHTML += `<label><input type="checkbox" value="${c}" class="category-cb" onchange="filterDrugs()" ${isChecked}> ${c} <span class="brand-count">(${counts[c]})</span></label>`;
-            });
-        }
-
-        function selectAllBrands(isSel) {
-            document.querySelectorAll('.brand-cb').forEach(cb => cb.checked = isSel); 
-            filterDrugs();
-        }
-
-        function selectAllCategories(isSel) {
-            document.querySelectorAll('.category-cb').forEach(cb => cb.checked = isSel); 
-            filterDrugs();
-        }
-
-        function renderDrugs(drugs) {
-            const list = document.getElementById('drugList'); 
-            list.innerHTML = '';
-            drugs.slice(0, 100).forEach(d => {
-                const tag = d.uniqueHerbCount === 1 ? '<span style="color:#e67e22;">[單方]</span>' : '<span style="color:#2980b9;">[複方]</span>';
-                list.innerHTML += `
-                    <li class="drug-item ${d.isWarning ? 'warning-bg' : ''}">
-                        <div class="drug-info-wrapper has-hover" onclick="toggleMobileCard(this)">
-                            <span style="color:#888;font-size:12px;">[${d.brand}] [${d.category}] ${tag}</span><br>
-                            <span class="${d.isWarning?'warning-text':''}" style="font-size:16px;"><strong>${d.name}</strong></span>
-                            ${getHoverCardHTML(d)}
-                        </div>
-                        <button class="add-btn" onclick="addToPrescription(${d.id})">加入</button>
-                    </li>`;
-            });
-            if (drugs.length > 100) {
-                list.innerHTML += `<li class="drug-item" style="color:#888; justify-content:center;">...還有 ${drugs.length - 100} 筆，請縮小搜尋範圍。</li>`;
-            }
-        }
-
-        function filterDrugs() {
-            const kw = document.getElementById('searchInput').value.trim().toLowerCase();
-            const checkedBrands = Array.from(document.querySelectorAll('.brand-cb:checked')).map(cb => cb.value);
-            const checkedCategories = Array.from(document.querySelectorAll('.category-cb:checked')).map(cb => cb.value);
-            
-            renderDrugs(database.filter(d => 
-                checkedBrands.includes(d.brand) && 
-                checkedCategories.includes(d.category) && 
-                (d.name.toLowerCase().includes(kw) || d.license.toLowerCase().includes(kw) || d.bopomofo.toLowerCase().includes(kw))
-            ));
-        }
-
-        function addToPrescription(id) {
-            if (!prescription.find(p => p.id === id)) { 
-                prescription.push({ ...database.find(d => d.id === id), dose: 0 }); 
-                renderPrescription(); 
-            }
-        }
-
-        function removePrescription(id) {
-            prescription = prescription.filter(p => p.id !== id); 
-            renderPrescription(); calculateResult();
-        }
-
-        function updateDose(id, value) {
-            const p = prescription.find(p => p.id === id);
-            if (p) { p.dose = parseFloat(value) || 0; calculateResult(); }
-        }
-
-        function renderPrescription() {
-            const list = document.getElementById('prescriptionList'); 
-            list.innerHTML = '';
-            prescription.forEach(p => {
-                list.innerHTML += `
-                    <div class="presc-item">
-                        <div class="presc-item-info has-hover" onclick="toggleMobileCard(this)">
-                            <span style="font-size:15px; color:#666;">[${p.brand}] [${p.category}]</span><br>
-                            <span><strong>${p.name}</strong></span>
-                            ${getHoverCardHTML(p)}
-                        </div>
-                        <div class="presc-item-controls">
-                            <input type="number" min="0" step="0.1" placeholder="克/日" value="${p.dose > 0 ? p.dose : ''}" 
-                                   onkeyup="updateDose(${p.id}, this.value)" onchange="updateDose(${p.id}, this.value)"> g
-                            <button class="remove-btn" onclick="removePrescription(${p.id})">X</button>
-                        </div>
-                    </div>`;
-            });
-        }
-
-        function getCleanDisplayName(name) {
-            return name.replace(/[\(（].*?[\)）]/g, '').replace(/濃縮|顆粒|細粒|微粒|膠囊|錠劑|散劑|丸劑|浸膏|液/g, '').trim();
-        }
-        
-        function getAbbrName(name) {
-            let clean = getCleanDisplayName(name);
-            return clean.length > 3 ? clean.substring(0, 3) : clean;
-        }
-
-        function getCoreHerbName(name) {
-            return name.replace(/炙|生|白|赤|乾|炮|製|藥|粉|炒|熟|川|懷/g, '').replace(/[\(（].*?[\)）]/g, '').trim();
-        }
-
-        function calculateResult() {
-            let finalHerbs = {}; 
-            let grandRaw = 0;
-            let herbSources = {}; 
-
-            prescription.forEach(p => {
-                if (p.dose > 0 && !p.isWarning && p.ratio > 0) {
-                    let formulaTotalWeight = (p.concTotalWeight / (p.ratio || 1)) + p.rawTotalWeight + p.excTotalWeight || 0.0001; 
-                    for (let herb in p.concHerbs) {
-                        let actualWeight = (p.concHerbs[herb] / (p.concTotalWeight || 0.0001)) * (p.concTotalWeight / p.ratio);
-                        let rawEq = p.dose * (actualWeight / formulaTotalWeight) * p.ratio;
-                        finalHerbs[herb] = (finalHerbs[herb] || 0) + rawEq;
-                        grandRaw += rawEq;
-                        
-                        if (!herbSources[herb]) herbSources[herb] = new Set();
-                        herbSources[herb].add(p.name);
-                    }
-                    for (let herb in p.rawHerbs) {
-                        let rawEq = p.dose * (p.rawHerbs[herb] / formulaTotalWeight) * 1.0;
-                        finalHerbs[herb] = (finalHerbs[herb] || 0) + rawEq;
-                        grandRaw += rawEq;
-
-                        if (!herbSources[herb]) herbSources[herb] = new Set();
-                        herbSources[herb].add(p.name);
-                    }
-                }
-            });
-            globalFinalHerbs = finalHerbs;
-            
-            const list = document.getElementById('resultList'); 
-            list.innerHTML = '';
-            Object.keys(finalHerbs).sort((a, b) => finalHerbs[b] - finalHerbs[a]).forEach(herb => {
-                if(finalHerbs[herb] > 0.01){
-                    let alertHtml = '';
-                    let sourceNamesArray = Array.from(herbSources[herb] || []);
-                    let fullSourceNames = sourceNamesArray.map(name => getCleanDisplayName(name)).join('、');
-                    
-                    let abbrTags = sourceNamesArray.map(name => `<span class="source-abbr">${getAbbrName(name)}</span>`).join('');
-
-                    if (isAnimalHerb(herb)) {
-                        alertHtml += `<span class="tag-animal">🍖 動物類</span>`;
-                    }
-
-                    if (herb === "牛膝(需確認川/懷)" || herb === "薑(需確認生/乾)") {
-                        alertHtml += `<span class="niuxi-alert">⚠️ 來自【${fullSourceNames}】，請確認</span>`;
-                    }
-                    if(toxicAlerts[herb] && finalHerbs[herb] > toxicAlerts[herb].max) {
-                        alertHtml += `<span class="toxic-alert">⚠️ 超量 (來自: ${fullSourceNames})</span>`;
-                    }
-                    
-                    list.innerHTML += `
-                        <div class="result-item">
-                            <div class="result-item-left">
-                                ${herb} ${alertHtml}
-                                <div>${abbrTags}</div>
-                            </div>
-                            <div class="result-item-right">${finalHerbs[herb].toFixed(2)} g</div>
-                        </div>`;
-                }
-            });
-            document.getElementById('totalWeightDisplay').innerText = `總生藥重量: ${grandRaw.toFixed(2)} g`;
-        }
-
-        function getHerbCoefficient(item, herbName) {
-            let fw = (item.concTotalWeight / (item.ratio || 1)) + item.rawTotalWeight + item.excTotalWeight;
-            if(fw <= 0) fw = 0.0001;
-            let coef = 0;
-            if (item.concHerbs && item.concHerbs[herbName]) {
-                coef += ((item.concHerbs[herbName] / (item.concTotalWeight||0.0001)) * (item.concTotalWeight/item.ratio) / fw) * item.ratio;
-            }
-            if (item.rawHerbs && item.rawHerbs[herbName]) {
-                coef += (item.rawHerbs[herbName] / fw) * 1.0;
-            }
-            return coef;
-        }
-
-        function switchTab(tabName) {
-            document.getElementById('tabStrict').classList.remove('active');
-            document.getElementById('tabStructure').classList.remove('active');
-            document.getElementById('strictPlansArea').style.display = 'none';
-            document.getElementById('structurePlansArea').style.display = 'none';
-
-            if(tabName === 'strict') {
-                document.getElementById('tabStrict').classList.add('active');
-                document.getElementById('strictPlansArea').style.display = 'block';
-            } else {
-                document.getElementById('tabStructure').classList.add('active');
-                document.getElementById('structurePlansArea').style.display = 'block';
-            }
-        }
-
-        function runEducationalAnalysis() {
-            if (prescription.filter(p => p.dose > 0).length === 0) {
-                alert("⚠️ 請先輸入處方劑量！"); return;
-            }
-
-            let netTargets = {};
-            let targetHerbNames = [];
-            for (let herb in globalFinalHerbs) {
-                if (globalFinalHerbs[herb] > 0.01) { 
-                    netTargets[herb] = globalFinalHerbs[herb]; 
-                    targetHerbNames.push(herb);
-                }
-            }
-            if (targetHerbNames.length === 0) return;
-
-            const isVeganMode = document.getElementById('veganModeToggle').checked;
-            if (isVeganMode) {
-                let animalTargets = targetHerbNames.filter(h => isAnimalHerb(h));
-                if (animalTargets.length > 0) {
-                    alert(`⚠️ 您開啟了「純素友善模式」，但當前處方中包含了動物類藥材（${animalTargets.join(', ')}）。\n\nAI 將自動為您排除這些成分，僅針對「植物性藥材」進行素食骨架的重組與推薦！`);
-                    targetHerbNames = targetHerbNames.filter(h => !isAnimalHerb(h));
-                    for(let h of animalTargets) delete netTargets[h];
-                }
-            }
-
-            const checkedBrands = Array.from(document.querySelectorAll('.brand-cb:checked')).map(cb => cb.value);
-            const checkedCategories = Array.from(document.querySelectorAll('.category-cb:checked')).map(cb => cb.value);
-            
-            let validDB = database.filter(item => {
-                if (!checkedBrands.includes(item.brand) || item.isWarning || item.ratio <= 0) return false;
-                if (!checkedCategories.includes(item.category)) return false; 
-                if (isVeganMode && item.herbArray.some(h => isAnimalHerb(h))) return false;
-                return true;
-            });
-
-            let singleHerbs = validDB.filter(d => d.uniqueHerbCount === 1);
-            let formulas = validDB.filter(d => d.uniqueHerbCount > 1);
-
-            let singleLookup = {};
-            singleHerbs.forEach(s => {
-                if(s.herbArray.length > 0 && !singleLookup[s.herbArray[0]]) {
-                    singleLookup[s.herbArray[0]] = s;
-                }
-            });
-            function getSingleHerbItem(herbName) { return singleLookup[herbName]; }
-
-            // ==============================================
-            // 核心 1：嚴謹劑量等效分析 
-            // ==============================================
-            generatedTeachingPlans = [];
-            
-            let allSinglesComb = [];
-            let allSinglesMissing = []; 
-            for (let herb in netTargets) {
-                let sh = getSingleHerbItem(herb);
-                if (!sh) { 
-                    allSinglesMissing.push(herb);
-                    continue; 
-                }
-                let coef = getHerbCoefficient(sh, herb);
-                if(coef > 0) allSinglesComb.push({ item: sh, dose: parseFloat((netTargets[herb] / coef).toFixed(2)) });
-            }
-            
-            let singlePlanTitle = "原形拆解 (全單方組合)";
-            if (allSinglesMissing.length > 0) {
-                singlePlanTitle = `原形拆解 (部分單方組合) <span style="color:#e67e22; font-size:11px;">⚠️ 無法補足: ${allSinglesMissing.join(',')}</span>`;
-            }
-            generatedTeachingPlans.push({ title: singlePlanTitle, isPureSingle: true, combination: allSinglesComb, score: -1 });
-
-            formulas.forEach(formula => {
-                let fHerbs = formula.herbArray; 
-                let isSubset = true;
-                for(let h of fHerbs) { if (!netTargets[h]) { isSubset = false; break; } }
-                if (!isSubset) return; 
-
-                let maxDose = Infinity;
-                fHerbs.forEach(h => {
-                    let coef = getHerbCoefficient(formula, h);
-                    if (coef > 0) {
-                        let limit = netTargets[h] / coef;
-                        if (limit < maxDose) maxDose = limit;
-                    }
-                });
-                maxDose = Math.floor(maxDose * 10) / 10; 
-                if (maxDose < 1.0) return; 
-
-                let currentComb = [{ item: formula, dose: maxDose }];
-                let formulaCoverage = 0;
-                let strictMissingSingles = []; 
-
-                for (let herb in netTargets) {
-                    let provided = getHerbCoefficient(formula, herb) * maxDose;
-                    let remainder = netTargets[herb] - provided;
-                    formulaCoverage += provided; 
-
-                    if (remainder > 0.05) { 
-                        let sh = getSingleHerbItem(herb);
-                        if (!sh) { 
-                            strictMissingSingles.push(`${herb}(-${remainder.toFixed(1)}g)`);
-                            continue; 
-                        }
-                        let shCoef = getHerbCoefficient(sh, herb);
-                        if (shCoef > 0) {
-                            currentComb.push({ item: sh, dose: parseFloat((remainder / shCoef).toFixed(2)) });
-                        }
-                    }
-                }
-
-                let titleWithWarning = `正統方義：以【${getCleanDisplayName(formula.name)}】為主軸`;
-                if (strictMissingSingles.length > 0) {
-                    titleWithWarning += ` <span style="color:#e65100; font-size:11px;">⚠️ 殘留缺口: ${strictMissingSingles.join(', ')}</span>`;
-                }
-
-                generatedTeachingPlans.push({ 
-                    title: titleWithWarning, 
-                    isPureSingle: false, 
-                    combination: currentComb, 
-                    score: formulaCoverage,
-                    herbIdentity: formula.herbArray.join(',') 
-                });
-            });
-
-            generatedTeachingPlans.sort((a, b) => b.score - a.score);
-            
-            let finalDisplayPlans = [];
-            let seenStrictIdentities = new Set();
-            for (let plan of generatedTeachingPlans) {
-                if (plan.isPureSingle) continue;
-                if (!seenStrictIdentities.has(plan.herbIdentity)) {
-                    seenStrictIdentities.add(plan.herbIdentity);
-                    finalDisplayPlans.push(plan);
-                    if (finalDisplayPlans.length >= 4) break;
-                }
-            }
-
-            let pureSinglePlan = generatedTeachingPlans.find(p => p.isPureSingle);
-            if (pureSinglePlan) finalDisplayPlans.push(pureSinglePlan);
-
-            const optList = document.getElementById('optimizedList');
-            optList.innerHTML = '';
-            
-            if (finalDisplayPlans.length === 0 || (finalDisplayPlans.length === 1 && finalDisplayPlans[0].isPureSingle && allSinglesComb.length === 0)) {
-                let unsupportHerbs = [];
-                for(let herb in netTargets) {
-                    if(!getSingleHerbItem(herb)) unsupportHerbs.push(herb);
-                }
-                let failDiagnostic = `❌ 找不到能夠完全對應原藥材的等效方案。<br><br>`;
-                if (unsupportHerbs.length > 0) {
-                    failDiagnostic += `💡 <strong>診斷原因：</strong>目前處方包含無單味科中支援的成分：<span style="color:#d32f2f; font-weight:bold;">${unsupportHerbs.join(', ')}</span>。導致等效劑量矩陣無法閉合。請嘗試切換至「結構啟發」面板觀看骨架建議！`;
-                } else {
-                    failDiagnostic += `💡 <strong>診斷原因：</strong>勾選的廠牌與劑型限制過窄或開啟了純素模式，現有庫存無法覆蓋生藥種類。`;
-                }
-                optList.innerHTML = `<p style="color:#d32f2f; line-height:1.6; font-size:14px;">${failDiagnostic}</p>`;
-            } else {
-                finalDisplayPlans.forEach((plan, index) => {
-                    let itemsHtml = '';
-                    plan.combination.forEach(c => {
-                        let tag = c.item.uniqueHerbCount === 1 ? '單方' : '複方';
-                        itemsHtml += `
-                            <div class="plan-item">
-                                <div class="has-hover" onclick="toggleMobileCard(this)" style="display:inline-block;">
-                                    <span>[${c.item.brand}] <strong>${c.item.name}</strong> <small>(${tag})</small></span>
-                                    ${getHoverCardHTML(c.item)}
-                                </div>
-                                <span><strong>${c.dose} g</strong></span>
-                            </div>`;
-                    });
-
-                    optList.innerHTML += `
-                        <div class="plan-card">
-                            <div class="plan-header">
-                                <span class="plan-title">方案 ${index + 1}：${plan.title}</span>
-                                <button class="apply-btn" onclick="applyPlan(${index})">套用此等效劑量</button>
-                            </div>
-                            <div>${itemsHtml}</div>
-                        </div>`;
-                });
-            }
-
-            // ==============================================
-            // 核心 2：方劑結構啟發
-            // ==============================================
-            let structuralPlans = [];
-            
-            let unifiedCandidates = formulas.map(f => {
-                let surplus = f.herbArray.filter(h => !targetHerbNames.includes(h));
-                let matchCount = f.herbArray.filter(h => targetHerbNames.includes(h)).length;
-                return { formula: f, surplus: surplus, matchCount: matchCount };
-            }).filter(item => item.surplus.length <= 5 && item.matchCount >= 2); 
-
-            unifiedCandidates.sort((a, b) => {
-                let scoreA = a.matchCount - (a.surplus.length * 1.5);
-                let scoreB = b.matchCount - (b.surplus.length * 1.5);
-                return scoreB - scoreA;
-            });
-            
-            let topCandidates = unifiedCandidates.slice(0, 60).map(item => item.formula); 
-
-            function hasSillySwap(minusArray, missingArray) {
-                for (let m of minusArray) {
-                    let coreM = getCoreHerbName(m);
-                    if(!coreM) continue;
-                    for (let ah of missingArray) {
-                        let coreAh = getCoreHerbName(ah);
-                        if(!coreAh) continue;
-                        if (coreM === coreAh) {
-                            return true;
-                        }
-                    }
-                }
-                return false;
-            }
-
-            topCandidates.forEach(f1 => {
-                let combinedHerbs = new Set(f1.herbArray);
-                let surplus = [...combinedHerbs].filter(h => !targetHerbNames.includes(h));
-                let missing = targetHerbNames.filter(h => !combinedHerbs.has(h));
-                
-                if (hasSillySwap(surplus, missing)) return; 
-
-                if (surplus.length <= 5) {
-                    let singlesToUse = [];
-                    let missingSingles = []; 
-                    for(let h of missing) {
-                        let sh = getSingleHerbItem(h);
-                        if(!sh) { 
-                            missingSingles.push(h); 
-                        } else {
-                            singlesToUse.push(sh);
-                        }
-                    }
-                    structuralPlans.push({
-                        formulas: [f1], singles: singlesToUse, minusHerbs: surplus, missingSingles: missingSingles,
-                        totalItems: 1 + surplus.length + singlesToUse.length + missingSingles.length, 
-                        formulaHerbCount: combinedHerbs.size - surplus.length,
-                        isSubtraction: surplus.length > 0
-                    });
-                }
-            });
-
-            for(let i=0; i<topCandidates.length; i++) {
-                let f1 = topCandidates[i];
-                for(let j=i+1; j<topCandidates.length; j++) {
-                    let f2 = topCandidates[j];
-                    
-                    if (getCleanDisplayName(f1.name) === getCleanDisplayName(f2.name)) continue;
-
-                    let combinedHerbs = new Set(f1.herbArray);
-                    for(let h of f2.herbArray) combinedHerbs.add(h);
-                    
-                    let surplus = [...combinedHerbs].filter(h => !targetHerbNames.includes(h));
-                    let missing = targetHerbNames.filter(h => !combinedHerbs.has(h));
-                    
-                    if (hasSillySwap(surplus, missing)) continue;
-
-                    if (surplus.length <= 5) {
-                        let singlesToUse = [];
-                        let missingSingles = [];
-                        for(let h of missing) {
-                            let sh = getSingleHerbItem(h);
-                            if(!sh) { 
-                                missingSingles.push(h); 
-                            } else {
-                                singlesToUse.push(sh);
-                            }
-                        }
-                        structuralPlans.push({
-                            formulas: [f1, f2], singles: singlesToUse, minusHerbs: surplus, missingSingles: missingSingles,
-                            totalItems: 2 + surplus.length + singlesToUse.length + missingSingles.length, 
-                            formulaHerbCount: combinedHerbs.size - surplus.length,
-                            isSubtraction: surplus.length > 0
-                        });
-                    }
-                }
-            }
-
-            function getPlanAbsoluteSignature(plan) {
-                let fSig = plan.formulas.map(f => f.herbArray.join(',')).sort().join(' + ');
-                let mSig = plan.minusHerbs.sort().join(',');
-                let sSig = plan.singles.map(s => s.herbArray[0]).sort().join(',');
-                let msSig = plan.missingSingles.sort().join(','); 
-                return fSig + " | " + mSig + " | " + sSig + " | " + msSig;
-            }
-            
-            function getPlanFormulaConcepts(plan) {
-                return plan.formulas.map(f => f.herbArray.join(','));
-            }
-
-            let deduplicatedPlans = [];
-            let seenSignatures = new Set();
-            for(let p of structuralPlans) {
-                let sig = getPlanAbsoluteSignature(p);
-                if(!seenSignatures.has(sig)) {
-                    seenSignatures.add(sig);
-                    deduplicatedPlans.push(p);
-                }
-            }
-
-            const currentMode = document.getElementById('analysisModeSelect').value;
-            if (currentMode === 'compact') {
-                deduplicatedPlans.sort((a, b) => {
-                    if(a.totalItems !== b.totalItems) return a.totalItems - b.totalItems;
-                    return b.formulaHerbCount - a.formulaHerbCount; 
-                });
-            } else {
-                deduplicatedPlans.sort((a, b) => {
-                    let costA = (a.formulas.length > 1 ? 2 : 0) + (a.singles.length * 1.5) + (a.minusHerbs.length * 5) + (a.missingSingles.length * 10);
-                    let costB = (b.formulas.length > 1 ? 2 : 0) + (b.singles.length * 1.5) + (b.minusHerbs.length * 5) + (b.missingSingles.length * 10);
-                    
-                    if (Math.abs(costA - costB) < 2) return b.formulaHerbCount - a.formulaHerbCount;
-                    return costA - costB;
-                });
-            }
-
-            let finalDiversePlans = [];
-            let usedFormulaConcepts = new Set();
-            let remainingPlans = [];
-
-            for(let p of deduplicatedPlans) {
-                let concepts = getPlanFormulaConcepts(p);
-                let isCompletelyRedundant = concepts.every(c => usedFormulaConcepts.has(c));
-                
-                if(!isCompletelyRedundant) {
-                    finalDiversePlans.push(p);
-                    concepts.forEach(c => usedFormulaConcepts.add(c));
-                    if(finalDiversePlans.length >= 5) break;
-                } else {
-                    remainingPlans.push(p); 
-                }
-            }
-
-            if(finalDiversePlans.length < 5) {
-                for(let p of remainingPlans) {
-                    finalDiversePlans.push(p);
-                    if(finalDiversePlans.length >= 5) break;
-                }
-            }
-
-            const structList = document.getElementById('structuralList');
-            structList.innerHTML = '';
-            
-            if (finalDiversePlans.length === 0) {
-                structList.innerHTML = `<p style="color:#d32f2f;">無法生成結構啟發：查無合適的對應方劑。</p>`;
-            } else {
-                finalDiversePlans.forEach((plan, index) => {
-                    let tagsHtml = '';
-                    
-                    plan.formulas.forEach(f => {
-                        tagsHtml += `<div class="tag-formula has-hover" onclick="toggleMobileCard(this)">📦 ${getCleanDisplayName(f.name)}${getHoverCardHTML(f)}</div>`;
-                    });
-                    
-                    if (plan.minusHerbs.length > 0) {
-                        tagsHtml += `<span style="color:#ccc; line-height:28px;">-</span>`;
-                        plan.minusHerbs.forEach(mh => {
-                            tagsHtml += `<div class="tag-minus">❌ 去 ${mh}</div>`;
-                        });
-                    }
-                    
-                    if (plan.singles.length > 0) {
-                        tagsHtml += `<span style="color:#ccc; line-height:28px;">+</span>`;
-                        plan.singles.forEach(s => {
-                            tagsHtml += `<div class="tag-single has-hover" onclick="toggleMobileCard(this)">🌿 ${getCleanDisplayName(s.name)}${getHoverCardHTML(s)}</div>`;
-                        });
-                    }
-
-                    if (plan.missingSingles && plan.missingSingles.length > 0) {
-                        tagsHtml += `<span style="color:#ccc; line-height:28px;">+</span>`;
-                        plan.missingSingles.forEach(ms => {
-                            tagsHtml += `<div class="tag-single" style="background:#fff3cd; color:#856404; border-color:#ffeeba; cursor:not-allowed;">⚠️ 缺 ${ms}</div>`;
-                        });
-                    }
-                    
-                    let headerText = plan.isSubtraction ? 
-                        `啟發思路 ${index + 1}：經典加減法 (概念步驟：${plan.totalItems})` : 
-                        `啟發思路 ${index + 1}：精簡疊加骨架 (共 ${plan.totalItems} 品項)`;
-
-                    structList.innerHTML += `
-                        <div class="struct-card">
-                            <div class="struct-header">${headerText}</div>
-                            <div class="struct-tags">${tagsHtml}</div>
-                        </div>`;
-                });
-            }
-
-            let activeTabId = document.querySelector('.tab-btn.active').id;
-            let activeTab = activeTabId === 'tabStructure' ? 'structure' : 'strict';
-            document.getElementById('analysisResultArea').style.display = 'block';
-            switchTab(activeTab); 
-        }
-
-        function applyPlan(index) {
-            let plan = generatedTeachingPlans.filter(p => !p.isPureSingle).slice(0,4);
-            let pureSinglePlan = generatedTeachingPlans.find(p => p.isPureSingle);
-            if (pureSinglePlan) plan.push(pureSinglePlan);
-            
-            let selectedPlan = plan[index];
-            if (!selectedPlan) return;
-
-            prescription = [];
-            selectedPlan.combination.forEach(c => {
-                prescription.push({ ...c.item, dose: c.dose });
-            });
-
-            renderPrescription();
-            calculateResult();
-            document.getElementById('analysisResultArea').style.display = 'none';
-            alert("✅ 已成功替換為教學建議處方！");
-        }
-
-        loadCloudDatabase();
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
