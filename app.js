@@ -87,7 +87,7 @@ function toggleMobileCard(element) {
     }
 }
 
-// 🌟 三模式 UI 切換引擎 (加入強效防呆，找不到元素也不會當機)
+// 三模式 UI 切換引擎
 function switchMainMode(mode) {
     currentUIMode = mode;
     
@@ -133,13 +133,12 @@ function switchMainMode(mode) {
         if (clinOpt) clinOpt.style.display = 'none';
         if (prescHint) prescHint.style.display = 'inline-block';
         
-        // 🌟 單方學習模式：隱藏不必要的篩選表單
+        // 隱藏不必要的篩選表單
         if (filterBrands) filterBrands.style.display = 'none';
         if (filterCats) filterCats.style.display = 'none';
         if (safetyBox) safetyBox.style.display = 'none';
 
     } else if (mode === 'stats') {
-        // 🌟 開發者模式：隱藏主系統，顯示統計頁面
         if (mainUI) mainUI.style.display = 'none';
         if (statsUI) statsUI.style.display = 'flex';
         if (btnClin) btnClin.classList.remove('active-clinical');
@@ -153,30 +152,56 @@ function switchMainMode(mode) {
     calculateResult(); 
 }
 
-// 🌟 開發者：單味藥物統計渲染 (注音排序)
+// 🌟 開發者內部工具：全單味藥物統計渲染 (注音排序 + 孤兒藥物來源反查)
 function renderStats() {
-    let herbCounts = {};
+    let herbData = {}; // 改用物件結構同時儲存「次數」與「來源方劑清單」
     
     database.forEach(d => {
+        // 只統計經典「複方」
         if (d.uniqueHerbCount > 1 && !d.isWarning) {
+            // 格式化來源名稱，包含方劑名與藥廠，例如："葛根湯(港香蘭)"
+            let formulaIdentity = `${getCleanDisplayName(d.name)}(${d.brand})`;
+            
             d.herbArray.forEach(herb => {
-                herbCounts[herb] = (herbCounts[herb] || 0) + 1;
+                if (!herbData[herb]) {
+                    herbData[herb] = { count: 0, sources: [] };
+                }
+                herbData[herb].count += 1;
+                // 防呆：避免同一個藥廠內有重複資料重複塞入
+                if (!herbData[herb].sources.includes(formulaIdentity)) {
+                    herbData[herb].sources.push(formulaIdentity);
+                }
             });
         }
     });
 
-    // 繁體中文注音排序
-    let sortedHerbs = Object.keys(herbCounts).map(h => ({ name: h, count: herbCounts[h] }));
+    // 轉換成陣列以便進行繁體中文注音排序 (zh-TW)
+    let sortedHerbs = Object.keys(herbData).map(h => ({
+        name: h,
+        count: herbData[h].count,
+        sources: herbData[h].sources
+    }));
     sortedHerbs.sort((a, b) => a.name.localeCompare(b.name, 'zh-TW'));
 
     const listDiv = document.getElementById('statsListArea');
-    if(listDiv) {
-        listDiv.innerHTML = sortedHerbs.map(h => `
-            <div class="stat-item">
-                <span>🌿 ${h.name}</span>
-                <span class="stat-count">${h.count} 個複方</span>
-            </div>
-        `).join('');
+    if (listDiv) {
+        listDiv.innerHTML = sortedHerbs.map(h => {
+            // 🌟 核心商業邏輯：只有當數量小於等於 2 次時，才印出紅色的來源方劑清單
+            let sourcesHtml = '';
+            if (h.count <= 2) {
+                sourcesHtml = `<div style="font-size:12px; color:#e74c3c; font-weight:normal; margin-top:5px; line-height:1.4;">📍 來源：${h.sources.join('、')}</div>`;
+            }
+            
+            return `
+                <div class="stat-item">
+                    <div>
+                        <span>🌿 ${h.name}</span>
+                        ${sourcesHtml}
+                    </div>
+                    <span class="stat-count">${h.count} 個複方</span>
+                </div>
+            `;
+        }).join('');
     }
 }
 
@@ -276,7 +301,6 @@ function renderDrugs(drugs) {
     }
 }
 
-// 🌟 搜尋清單過濾器：學習模式強制鎖定「單方 + 港香蘭/莊松榮」
 function filterDrugs() {
     const searchInput = document.getElementById('searchInput');
     if(!searchInput) return;
@@ -342,7 +366,7 @@ function renderPrescription() {
     });
 }
 
-function getCleanDisplayName(name) { return name.replace(/[\(（].*?[\)）]/g, '').replace(/濃縮|顆粒|細粒|微粒|膠囊|錠劑|散劑|丸劑|浸膏|液/g, '').trim(); }
+function getCleanDisplayName(name) { return name.replace(/[\(（].*?[\)目標）]/g, '').replace(/濃縮|顆粒|細粒|微粒|膠囊|錠劑|散劑|丸劑|浸膏|液/g, '').trim(); }
 function getAbbrName(name) { let clean = getCleanDisplayName(name); return clean.length > 3 ? clean.substring(0, 3) : clean; }
 function getCoreHerbName(name) { return name.replace(/炙|生|白|赤|乾|炮|製|藥|粉|炒|熟|川|懷/g, '').replace(/[\(（].*?[\)）]/g, '').trim(); }
 
@@ -402,13 +426,8 @@ function calculateResult() {
             if (herb === "牛膝(需確認川/懷)" || herb === "薑(需確認生/乾)") alertHtml += `<span class="niuxi-alert">⚠️ 來自【${fullSourceNames}】，請確認</span>`;
             if(toxicAlerts[herb] && finalHerbs[herb] > toxicAlerts[herb].max) alertHtml += `<span class="toxic-alert">⚠️ 超量 (來自: ${fullSourceNames})</span>`;
             
-            // 🌟 顯示特殊族群標籤
-            if (isG6pdChecked && g6pdAlerts.includes(herb)) {
-                alertHtml += `<span class="tag-g6pd">⚠️ 蠶豆症警示</span>`;
-            }
-            if (isDopingChecked && dopingAlerts.includes(herb)) {
-                alertHtml += `<span class="tag-doping">🚫 運動禁藥</span>`;
-            }
+            if (isG6pdChecked && g6pdAlerts.includes(herb)) alertHtml += `<span class="tag-g6pd">⚠️ 蠶豆症警示</span>`;
+            if (isDopingChecked && dopingAlerts.includes(herb)) alertHtml += `<span class="tag-doping">🚫 運動禁藥</span>`;
             
             list.innerHTML += `
                 <div class="result-item">
@@ -445,7 +464,6 @@ function calculateResult() {
     }
 }
 
-// 🌟 雷達邏輯：鎖定兩家藥廠推導
 function runAI_Radar(compositionArray, doseHerbsMap) {
     const targetDisplay = document.getElementById('radarTargetHerbs');
     const radarList = document.getElementById('radarResultsList');
@@ -521,7 +539,7 @@ function runAI_Radar(compositionArray, doseHerbsMap) {
         radarList.innerHTML += `
             <div class="radar-card">
                 <div class="radar-title">
-                    <span>🎯 #${idx+1}：${getCleanDisplayName(r.formula.name)}</span>
+                    <span>🎯 #${idx+1}：${getCleanDisplayName(r.formula.name)} (${r.formula.brand})</span>
                     <span class="radar-score">${r.match.length} 味吻合</span>
                 </div>
                 <div style="font-size:13px; margin-bottom:5px;">${matchHtml} ${r.doseMsg}</div>
@@ -595,7 +613,6 @@ function runEducationalAnalysis() {
         }
     }
 
-    // 🌟 AI 分析引擎鎖定「港香蘭」邏輯
     let targetSimulationBrand = "港香蘭"; 
     const checkedCategories = Array.from(document.querySelectorAll('.category-cb:checked')).map(cb => cb.value);
     
@@ -614,7 +631,6 @@ function runEducationalAnalysis() {
             if (isVeganMode && item.herbArray.some(h => isAnimalHerb(h))) return false;
             return true;
         });
-        console.warn("查無港香蘭資料，AI 退回使用全局勾選廠牌作為推導依據");
     }
 
     let singleHerbs = validDB.filter(d => d.uniqueHerbCount === 1);
