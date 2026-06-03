@@ -3,9 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
     <title>科學中藥原藥材換算與臨床教學平台(測試版)</title>
     <meta name="description" content="專為中醫師與調劑人員打造的「科學中藥原藥材換算平台」。支援各廠牌科中精準換算、同物異名合併、毒劇藥安全把關，並內建方劑加減教學推薦系統，提升臨床開藥精準度。">
+    <meta name="keywords" content="科學中藥,科中換算,原藥材換算,中藥劑量計算,科中單複方,科學中藥賦形劑,中醫教學,方劑加減,小巴中醫,陳建中醫師,中醫師輔助工具,處方優化">
     <meta name="author" content="小巴親子中醫, 陳建中醫師">
+    
+    <meta property="og:title" content="科學中藥原藥材換算與臨床教學平台(測試版)">
+    <meta property="og:description" content="支援各廠牌科中劑量精準換算、十八反防呆與方劑雷達反向推導，臨床開藥輔助利器。">
+    <meta property="og:type" content="website">
+
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-0WMG9NCPX5"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -13,7 +20,9 @@
       gtag('js', new Date());
       gtag('config', 'G-0WMG9NCPX5');
     </script>
+
     <link rel="stylesheet" href="style.css">
+    
     <script src="papaparse.min.js"></script>
 </head>
 <body>
@@ -80,7 +89,11 @@
 
                 <details class="opt-section" id="clinicalAnalysisSection">
                     <summary class="opt-title">🎓 AI 處方本質分析與教學推薦 <span style="font-size:13px; color:#666; font-weight:normal; margin-left:auto;">(點擊展開)</span></summary>
-                    <p style="font-size:12px; color:#666; margin:10px 0 10px 0;">深入分析疊方背後的「原藥材本質」，提供嚴謹的劑量等效方案，以及引入「加減法」思維的多變結構啟發。</p>
+                    <p style="font-size:12px; color:#666; margin:10px 0 10px 0;">
+                        深入分析疊方背後的「原藥材本質」，提供嚴謹的劑量等效方案，以及引入「加減法」思維的多變結構啟發。<br>
+                        <span style="color:#e65100; font-weight:bold; display:inline-block; margin-top:5px; padding:4px 8px; background:#fff3e0; border-radius:4px; border:1px solid #ffe0b2;">💡 系統預設：為減少重複方劑洗版，AI 分析引擎預設以「港香蘭」資料庫作為推導模擬基準。</span>
+                    </p>
+                    
                     <div style="margin-bottom: 12px; background: #e3f2fd; padding: 10px; border-radius: 4px; border: 1px solid #bbdefb; display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
                         <label style="font-size:14px; color:#0d47a1; font-weight:bold; cursor:pointer; width: 100%;">
                             🧠 AI 結構分析模式：
@@ -90,14 +103,27 @@
                             </select>
                         </label>
                     </div>
+
+                    <div style="margin-bottom: 12px; background: #e8f5e9; padding: 8px; border-radius: 4px; border: 1px solid #c8e6c9;">
+                        <label style="font-size:14px; color:#2e7d32; font-weight:bold; cursor:pointer; display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="veganModeToggle" style="width:18px; height:18px;" onchange="runEducationalAnalysis()">
+                            🌱 純素友善模式 (過濾動物性方藥)
+                        </label>
+                    </div>
+
                     <button class="add-btn" style="background-color:#0288d1; width:100%; font-size:16px;" onclick="runEducationalAnalysis()">🧠 啟動臨床處方深度分析</button>
+                    
                     <div id="analysisResultArea" style="display:none; margin-top:15px; border-top:1px solid #b3e5fc; padding-top:15px;">
                         <div class="tab-container">
                             <button class="tab-btn active" id="tabStrict" onclick="switchTab('strict')">⚖️ 嚴謹劑量等效方案</button>
                             <button class="tab-btn" id="tabStructure" onclick="switchTab('structure')">🧭 結構方義啟發 (加減法)</button>
                         </div>
-                        <div id="strictPlansArea"><div id="optimizedList"></div></div>
-                        <div id="structurePlansArea" style="display:none;"><div id="structuralList"></div></div>
+                        <div id="strictPlansArea">
+                            <div id="optimizedList"></div>
+                        </div>
+                        <div id="structurePlansArea" style="display:none;">
+                            <div id="structuralList"></div>
+                        </div>
                     </div>
                 </details>
             </div>
@@ -113,10 +139,12 @@
 
                 <div id="learningRadarBox" style="display:none;">
                     <h3>💡 單方學習模式 (方義反推)</h3>
-                    <p style="font-size: 13px; color: #666;">系統將以「港香蘭」與「莊松榮」兩大藥廠之標準方劑庫為基準，為您反推最可能的經典方義。</p>
+                    <p style="font-size: 13px; color: #666;">系統已鎖定「港香蘭」與「莊松榮」標準庫。根據左側單方，即時反向推算經典方劑結構與藥味命中率。</p>
+                    
                     <div style="background: #f4f6f7; padding: 10px; border-radius: 6px; font-size:13px; margin-bottom:15px; color:#555;">
                         <strong>當前偵測單方：</strong> <span id="radarTargetHerbs" style="color:#8e44ad; font-weight:bold;">無</span>
                     </div>
+
                     <div id="radarResultsList">
                         <p style="color:#888; text-align:center; padding: 20px;">請在左側搜尋並加入單方，<br>雷達將自動啟動掃描。</p>
                     </div>
@@ -124,16 +152,20 @@
             </div>
         </div>
 
-        <div class="container" id="statsUIContainer" style="display:none; flex-direction:column; max-width:800px;">
+        <div class="container" id="statsUIContainer" style="display:none; flex-direction:column; max-width:900px; margin: 0 auto;">
             <div class="column" style="width:100%;">
                 <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; margin-bottom: 20px;">
-                    <h2 style="margin:0; color:#2c3e50;">📊 資料庫單味藥物頻率統計</h2>
-                    <button class="apply-btn" onclick="switchMainMode('clinical')">🔙 返回臨床系統</button>
+                    <h2 style="margin:0; color:#2c3e50;">📊 資料庫全單味藥出現頻率透視 (除錯工具)</h2>
+                    <button class="apply-btn" onclick="switchMainMode('clinical')">🔙 返回換算系統</button>
                 </div>
-                <p style="color:#666; font-size:14px;">此清單列出資料庫中「所有複方」所包含的單味生藥，並依據<strong>注音符號</strong>自動排序。<br>此功能可協助開發者找出是否有未合併的異名（如同時代出現「當歸」與「當歸身」）。</p>
+                <p style="color:#666; font-size:14px; line-height:1.5;">
+                    此功能會掃描全資料庫內所有的<strong>複方組成</strong>，加總統計各單味藥在多少個方劑中被使用，並嚴格依據<strong>注音符號順序</strong>進行排列。<br>
+                    <strong>💡 檢查要點：</strong>若在附近位置看見同音異名（如「當歸」與「當歸身」同時獨立出現），代表您的雲端試算表字典需要進行對應異名合併。
+                </p>
                 <div id="statsListArea" class="stats-grid"></div>
             </div>
         </div>
+
     </div>
 
     <div class="platform-footer">
@@ -142,30 +174,34 @@
                 <h4>💡 系統資訊</h4>
                 <p style="font-weight: bold; color:#fff;">科學中藥原藥材換算與臨床教學平台 (測試版)</p>
                 <p>專為中醫師打造的臨床精準換算輔助、與 AI 方義反推學習工具。</p>
+                <p style="margin-top: 20px; font-size: 12px; color: #7f8c8d;">&copy; 2026 小巴親子中醫 & 陳建中醫師. All rights reserved.</p>
             </div>
+
             <div class="footer-col">
                 <h4>📚 權威資料與警示參考</h4>
                 <ul>
                     <li><a href="https://service.mohw.gov.tw/DOCMAP/CusSite/TCMLQueryForm.aspx" target="_blank">▸ 衛福部中藥藥品許可證查詢系統</a></li>
-                    <li><a href="https://www.check-antidoping.org.tw/inquiry.php?category=3" target="_blank">▸ 運動禁藥基準 (CTADA)</a></li>
-                    <li><a href="https://www.hpa.gov.tw/" target="_blank">▸ 蠶豆症警示 (國健署)</a></li>
+                    <li><a href="https://www.check-antidoping.org.tw/inquiry.php?category=3" target="_blank">▸ 運動禁藥基準：運動禁藥管制基金會 (CTADA)</a></li>
+                    <li><a href="https://www.hpa.gov.tw/" target="_blank">▸ 蠶豆症警示：衛生福利部國民健康署指引</a></li>
                 </ul>
             </div>
+
             <div class="footer-col">
                 <h4>🔗 開發團隊與社群</h4>
                 <div class="footer-links-vertical">
                     <a href="https://drsmall8.com/" target="_blank">🌐 小巴中醫 官方網站</a>
                     <a href="https://www.facebook.com/DrSmall8" target="_blank">📘 鄭育昕 (小巴醫師) FB</a>
+                    <a href="https://www.facebook.com/DrChienChien/" target="_blank">📘 陳建中醫師 FB</a>
                 </div>
             </div>
         </div>
 
         <div class="feedback-box">
-            <p style="margin: 0 0 10px 0; color: #81d4fa; font-weight: bold; font-size: 15px;">🐛 系統公測中，需要您的協助！</p>
+            <p style="margin: 0 0 10px 0; color: #81d4fa; font-weight: bold; font-size: 15px;">🐛 系統公測中，歡迎留言反饋</p>
             <a href="https://drsmall8.com/calc/" target="_blank" class="footer-link-btn" style="background: #0277bd; color: white; border: none; display: inline-block;">🛠️ 前往除錯與建議留言區</a>
             
-            <div style="margin-top: 20px; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 15px;">
-                <button onclick="switchMainMode('stats')" style="background:transparent; color:#7f8c8d; border:1px solid #7f8c8d; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:12px;">⚙️ 開發者工具：單味藥頻率透視</button>
+            <div style="margin-top: 20px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 15px; text-align: center;">
+                <button onclick="switchMainMode('stats')" style="background:transparent; color:#7f8c8d; border:1px solid #4f5d6b; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:12px; transition: 0.2s;">⚙️ 開發者內部工具：單味藥物頻率統計表</button>
             </div>
         </div>
     </div>
