@@ -49,20 +49,17 @@ input, select, button { padding: 10px; margin: 5px 0; border: 1px solid #ccc; bo
 .category-wiki summary:hover { background: #bbdefb; border-radius: 6px; }
 .wiki-content { padding: 0 15px 15px 15px; color: #444; line-height: 1.6; }
 .wiki-content h4 { color: #01579b; margin: 10px 0 5px 0; border-bottom: 1px dashed #bbdefb; padding-bottom: 4px;}
-.wiki-content p { margin: 4px 0; }
 
 .btn-small { padding: 4px 12px; font-size: 14px; cursor: pointer; background: #6c757d; color: white; border: none; border-radius: 4px; }
 .btn-small:hover { background: #5a6268; }
 
 .opt-section { background: #fff; border: 2px dashed #0288d1; padding: 15px; border-radius: 8px; margin-top: 20px; }
 .opt-title { font-weight: bold; color: #0277bd; display: flex; align-items: center; gap: 5px; font-size: 16px; cursor: pointer; user-select: none; outline: none;}
-.opt-title:hover { color: #01579b; }
 
 .plan-card { background: #f8fbff; border: 1px solid #b3e5fc; border-radius: 6px; padding: 12px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 .plan-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e1f5fe; padding-bottom: 8px; margin-bottom: 8px; }
 .plan-title { font-weight: bold; color: #0277bd; font-size: 15px; }
 .plan-item { display: flex; justify-content: space-between; font-size: 14px; padding: 6px 0; border-bottom: 1px dashed #eee; align-items: center;}
-.plan-item:last-child { border-bottom: none; }
 
 .struct-card { background: #fff8e1; border: 1px solid #ffecb3; border-radius: 6px; padding: 12px; margin-bottom: 10px; }
 .struct-header { font-weight: bold; color: #f57f17; font-size: 14px; margin-bottom: 8px; border-bottom: 1px dashed #ffe082; padding-bottom: 4px;}
@@ -132,6 +129,11 @@ input[type=number] { -moz-appearance: textfield; }
 .radar-title { font-size: 16px; font-weight: bold; color: #8e44ad; margin-bottom: 10px; display: flex; justify-content: space-between;}
 .radar-score { font-size: 13px; color: #fff; background: #8e44ad; padding: 2px 8px; border-radius: 12px;}
 
+/* 🌟 開發者統計表單網格設計 */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;}
+.stat-item { background: #fdfefe; border: 1px solid #e0e0e0; padding: 12px; border-radius: 6px; display: flex; justify-content: space-between; font-size: 15px; font-weight: bold; color: #2c3e50;}
+.stat-count { color: #e67e22; }
+
 .platform-footer { margin-top: 40px; padding: 40px 20px 20px; background-color: #2c3e50; color: #ecf0f1; font-size: 14px; border-top: 4px solid #0288d1; }
 .footer-grid { display: flex; justify-content: space-between; flex-wrap: wrap; max-width: 1000px; margin: 0 auto; gap: 30px; text-align: left; }
 .footer-col { flex: 1; min-width: 280px; }
@@ -156,7 +158,6 @@ input[type=number] { -moz-appearance: textfield; }
     .right-col { position: relative; top: 0; } 
     .mode-switch-container { width: 100%; margin-bottom: 15px; }
     .mode-btn { flex: 1; padding: 10px 5px; font-size: 14px; white-space: nowrap;}
-    #analysisModeSelect { max-width: 100%; white-space: normal; word-break: break-word; }
     
     .result-item { padding: 10px 0; align-items: center; }
     .result-item-left { word-break: keep-all; font-size: 15px; }
