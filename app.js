@@ -1,6 +1,3 @@
-// ==========================================
-// 讀取本地端 CSV 資料庫 (確保 database.csv 在同個資料夾)
-// ==========================================
 const googleSheetCsvUrl = "database.csv";
 
 let database = []; 
@@ -11,6 +8,10 @@ let prescription = prescriptionClinical;
 let globalFinalHerbs = {}; 
 let generatedTeachingPlans = []; 
 let currentUIMode = 'clinical'; 
+
+// 🌟 新增：解決注音卡頓的狀態變數
+let isComposing = false;
+let searchDebounceTimer = null;
 
 const herbDictionary = {
     "甘草(炙)": "炙甘草", "甘草（炙）": "炙甘草", "蜜甘草": "炙甘草", "炙草": "炙甘草",
@@ -38,7 +39,6 @@ const eighteenIncompatibilities = [
     { base: ["藜蘆"], against: ["人參", "黨參", "沙參", "丹參", "玄參", "細辛", "芍藥", "白芍", "赤芍", "苦參"] }
 ];
 
-// 特殊安全防呆清單
 const g6pdAlerts = ["黃連", "冰片", "珍珠粉", "牛黃", "金銀花", "牡丹皮", "生地黃", "柴胡", "大黃", "虎杖", "番瀉葉"];
 const dopingAlerts = ["麻黃", "蓮子心", "丁香", "附子", "炮附子", "吳茱萸", "南天星", "枳實", "枳殼", "細辛", "蒼耳子", "辛夷"];
 
@@ -87,7 +87,6 @@ function toggleMobileCard(element) {
     }
 }
 
-// 三模式 UI 切換引擎
 function switchMainMode(mode) {
     currentUIMode = mode;
     
@@ -149,7 +148,6 @@ function switchMainMode(mode) {
     calculateResult(); 
 }
 
-// 🌟 開發者內部工具：全單味藥物統計渲染 (每一筆都列出參考來源)
 function renderStats() {
     let herbData = {}; 
     
@@ -179,13 +177,8 @@ function renderStats() {
     const listDiv = document.getElementById('statsListArea');
     if (listDiv) {
         listDiv.innerHTML = sortedHerbs.map(h => {
-            // 🌟 擷取前 2 個來源，若超過 2 個則加上「等...」
             let displaySources = h.sources.slice(0, 2).join('、');
-            if (h.sources.length > 2) {
-                displaySources += ' 等...';
-            }
-            
-            // 🌟 每一筆都顯示來源
+            if (h.sources.length > 2) displaySources += ' 等...';
             let sourcesHtml = `<div style="font-size:12px; color:#e74c3c; font-weight:normal; margin-top:5px; line-height:1.4;">📍 來源參考：${displaySources}</div>`;
             
             return `
@@ -297,7 +290,8 @@ function renderDrugs(drugs) {
     }
 }
 
-function filterDrugs() {
+// 🌟 將原本的過濾核心邏輯改名為 actualFilterDrugs
+function actualFilterDrugs() {
     const searchInput = document.getElementById('searchInput');
     if(!searchInput) return;
     const keywords = searchInput.value.split(/[,，\s]+/).map(kw => kw.trim().toLowerCase()).filter(kw => kw.length > 0);
@@ -316,6 +310,18 @@ function filterDrugs() {
         return keywords.some(kw => d.name.toLowerCase().includes(kw) || d.license.toLowerCase().includes(kw) || d.bopomofo.toLowerCase().includes(kw));
     });
     renderDrugs(filteredData);
+}
+
+// 🌟 新的過濾防抖包裝器
+function filterDrugs() {
+    // 如果正在打注音，直接忽略這次觸發，避免卡頓
+    if (isComposing) return;
+    
+    // 清除上一次的計時器，並重新設定 200ms 的延遲
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+        actualFilterDrugs();
+    }, 200); 
 }
 
 function addToPrescription(id) {
@@ -1007,3 +1013,15 @@ function applyPlan(index) {
 
 // 啟動系統
 loadCloudDatabase();
+
+// 🌟 綁定輸入法組字事件 (解決注音卡頓)
+const searchInputElem = document.getElementById('searchInput');
+if (searchInputElem) {
+    searchInputElem.addEventListener('compositionstart', () => { 
+        isComposing = true; 
+    });
+    searchInputElem.addEventListener('compositionend', () => { 
+        isComposing = false; 
+        filterDrugs(); 
+    });
+}
