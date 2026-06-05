@@ -104,7 +104,6 @@ function switchMainMode(mode) {
     const filterCats = document.getElementById('filterCategoriesBox');
     const safetyBox = document.getElementById('safetyToggleBox');
 
-    // 歸位主要佈局
     if (statsUI) statsUI.style.display = 'none';
     if (mainUI) mainUI.style.display = 'flex';
 
@@ -118,7 +117,6 @@ function switchMainMode(mode) {
         if (clinOpt) clinOpt.style.display = 'block';
         if (prescHint) prescHint.style.display = 'none';
         
-        // 恢復顯示篩選表單
         if (filterBrands) filterBrands.style.display = 'block';
         if (filterCats) filterCats.style.display = 'block';
         if (safetyBox) safetyBox.style.display = 'block';
@@ -133,7 +131,6 @@ function switchMainMode(mode) {
         if (clinOpt) clinOpt.style.display = 'none';
         if (prescHint) prescHint.style.display = 'inline-block';
         
-        // 隱藏不必要的篩選表單
         if (filterBrands) filterBrands.style.display = 'none';
         if (filterCats) filterCats.style.display = 'none';
         if (safetyBox) safetyBox.style.display = 'none';
@@ -152,14 +149,12 @@ function switchMainMode(mode) {
     calculateResult(); 
 }
 
-// 🌟 開發者內部工具：全單味藥物統計渲染 (注音排序 + 孤兒藥物來源反查)
+// 🌟 開發者內部工具：全單味藥物統計渲染 (每一筆都列出參考來源)
 function renderStats() {
-    let herbData = {}; // 改用物件結構同時儲存「次數」與「來源方劑清單」
+    let herbData = {}; 
     
     database.forEach(d => {
-        // 只統計經典「複方」
         if (d.uniqueHerbCount > 1 && !d.isWarning) {
-            // 格式化來源名稱，包含方劑名與藥廠，例如："葛根湯(港香蘭)"
             let formulaIdentity = `${getCleanDisplayName(d.name)}(${d.brand})`;
             
             d.herbArray.forEach(herb => {
@@ -167,7 +162,6 @@ function renderStats() {
                     herbData[herb] = { count: 0, sources: [] };
                 }
                 herbData[herb].count += 1;
-                // 防呆：避免同一個藥廠內有重複資料重複塞入
                 if (!herbData[herb].sources.includes(formulaIdentity)) {
                     herbData[herb].sources.push(formulaIdentity);
                 }
@@ -175,7 +169,6 @@ function renderStats() {
         }
     });
 
-    // 轉換成陣列以便進行繁體中文注音排序 (zh-TW)
     let sortedHerbs = Object.keys(herbData).map(h => ({
         name: h,
         count: herbData[h].count,
@@ -186,11 +179,14 @@ function renderStats() {
     const listDiv = document.getElementById('statsListArea');
     if (listDiv) {
         listDiv.innerHTML = sortedHerbs.map(h => {
-            // 🌟 核心商業邏輯：只有當數量小於等於 2 次時，才印出紅色的來源方劑清單
-            let sourcesHtml = '';
-            if (h.count <= 2) {
-                sourcesHtml = `<div style="font-size:12px; color:#e74c3c; font-weight:normal; margin-top:5px; line-height:1.4;">📍 來源：${h.sources.join('、')}</div>`;
+            // 🌟 擷取前 2 個來源，若超過 2 個則加上「等...」
+            let displaySources = h.sources.slice(0, 2).join('、');
+            if (h.sources.length > 2) {
+                displaySources += ' 等...';
             }
+            
+            // 🌟 每一筆都顯示來源
+            let sourcesHtml = `<div style="font-size:12px; color:#e74c3c; font-weight:normal; margin-top:5px; line-height:1.4;">📍 來源參考：${displaySources}</div>`;
             
             return `
                 <div class="stat-item">
@@ -366,7 +362,7 @@ function renderPrescription() {
     });
 }
 
-function getCleanDisplayName(name) { return name.replace(/[\(（].*?[\)目標）]/g, '').replace(/濃縮|顆粒|細粒|微粒|膠囊|錠劑|散劑|丸劑|浸膏|液/g, '').trim(); }
+function getCleanDisplayName(name) { return name.replace(/[\(（].*?[\)）]/g, '').replace(/濃縮|顆粒|細粒|微粒|膠囊|錠劑|散劑|丸劑|浸膏|液/g, '').trim(); }
 function getAbbrName(name) { let clean = getCleanDisplayName(name); return clean.length > 3 ? clean.substring(0, 3) : clean; }
 function getCoreHerbName(name) { return name.replace(/炙|生|白|赤|乾|炮|製|藥|粉|炒|熟|川|懷/g, '').replace(/[\(（].*?[\)）]/g, '').trim(); }
 
