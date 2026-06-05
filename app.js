@@ -1,3 +1,6 @@
+// ==========================================
+// 讀取本地端 CSV 資料庫 (確保 database.csv 在同個資料夾)
+// ==========================================
 const googleSheetCsvUrl = "database.csv";
 
 let database = []; 
@@ -9,7 +12,7 @@ let globalFinalHerbs = {};
 let generatedTeachingPlans = []; 
 let currentUIMode = 'clinical'; 
 
-// 🌟 新增：解決注音卡頓的狀態變數
+// 🌟 解決注音卡頓的狀態變數
 let isComposing = false;
 let searchDebounceTimer = null;
 
@@ -87,6 +90,7 @@ function toggleMobileCard(element) {
     }
 }
 
+// 🌟 模式切換
 function switchMainMode(mode) {
     currentUIMode = mode;
     
@@ -148,6 +152,7 @@ function switchMainMode(mode) {
     calculateResult(); 
 }
 
+// 🌟 統計畫面
 function renderStats() {
     let herbData = {}; 
     
@@ -194,6 +199,7 @@ function renderStats() {
     }
 }
 
+// 🌟 載入資料庫
 function loadCloudDatabase() {
     const statusMessage = document.getElementById('statusMessage');
     Papa.parse(googleSheetCsvUrl, {
@@ -290,7 +296,7 @@ function renderDrugs(drugs) {
     }
 }
 
-// 🌟 將原本的過濾核心邏輯改名為 actualFilterDrugs
+// 🌟 實際過濾邏輯
 function actualFilterDrugs() {
     const searchInput = document.getElementById('searchInput');
     if(!searchInput) return;
@@ -312,12 +318,9 @@ function actualFilterDrugs() {
     renderDrugs(filteredData);
 }
 
-// 🌟 新的過濾防抖包裝器
+// 🌟 防抖過濾器 (唯一版本)
 function filterDrugs() {
-    // 如果正在打注音，直接忽略這次觸發，避免卡頓
     if (isComposing) return;
-    
-    // 清除上一次的計時器，並重新設定 200ms 的延遲
     clearTimeout(searchDebounceTimer);
     searchDebounceTimer = setTimeout(() => {
         actualFilterDrugs();
@@ -1011,17 +1014,17 @@ function applyPlan(index) {
     alert("✅ 已成功替換為教學建議處方！");
 }
 
-// 啟動系統
-loadCloudDatabase();
-
-// 🌟 綁定輸入法組字事件 (解決注音卡頓)
-const searchInputElem = document.getElementById('searchInput');
-if (searchInputElem) {
-    searchInputElem.addEventListener('compositionstart', () => { 
-        isComposing = true; 
-    });
-    searchInputElem.addEventListener('compositionend', () => { 
-        isComposing = false; 
-        filterDrugs(); 
-    });
-}
+// 🌟 初始化：確保畫面加載完畢再綁定事件
+window.addEventListener('DOMContentLoaded', () => {
+    loadCloudDatabase();
+    
+    // 綁定注音防抖事件
+    const searchInputElem = document.getElementById('searchInput');
+    if (searchInputElem) {
+        searchInputElem.addEventListener('compositionstart', () => { isComposing = true; });
+        searchInputElem.addEventListener('compositionend', () => { 
+            isComposing = false; 
+            filterDrugs(); 
+        });
+    }
+});
