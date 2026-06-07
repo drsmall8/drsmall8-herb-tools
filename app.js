@@ -17,6 +17,9 @@ let currentUIMode = 'clinical';
 let isComposing = false;
 let searchDebounceTimer = null;
 
+// 🌟 🆕 新增：全域圖表實例變數，用來控制圓餅圖的更新與銷毀
+let natureChartInstance = null;
+
 const herbDictionary = {
     "甘草(炙)": "炙甘草", "甘草（炙）": "炙甘草", "蜜甘草": "炙甘草", "炙草": "炙甘草",
     "薑(炮)": "炮薑", "炮薑": "炮薑",
@@ -383,6 +386,9 @@ function calculateResult() {
     let grandRaw = 0;
     let herbSources = {}; 
     let pureCompositionHerbs = new Set();
+    
+    // 🌟 🆕 新增：用於統計寒熱藥性的撲滿
+    let natureTally = { "寒": 0, "涼": 0, "平": 0, "溫": 0, "熱": 0 };
 
     prescription.forEach(p => {
         p.herbArray.forEach(h => pureCompositionHerbs.add(h)); 
@@ -419,7 +425,6 @@ function calculateResult() {
     const dopingToggle = document.getElementById('dopingToggle');
     const isDopingChecked = dopingToggle ? dopingToggle.checked : false;
 
-    // 🆕 新增：抓取純素防呆的切換開關
     const veganToggle = document.getElementById('veganToggle');
     const isVeganChecked = veganToggle ? veganToggle.checked : false;
 
@@ -434,7 +439,14 @@ function calculateResult() {
             let fullSourceNames = sourceNamesArray.map(name => getCleanDisplayName(name)).join('、');
             let abbrTags = sourceNamesArray.map(name => `<span class="source-abbr">${getAbbrName(name)}</span>`).join('');
 
-            // 🆕 判斷純素禁忌或顯示一般動物類標籤
+            // 🌟 🆕 新增：計算寒熱屬性
+            let herbNature = window.herbNatureDictionary ? (window.herbNatureDictionary[herb] || "平") : "平";
+            if (natureTally[herbNature] !== undefined) {
+                natureTally[herbNature] += finalHerbs[herb];
+            } else {
+                natureTally["平"] += finalHerbs[herb];
+            }
+
             if (isAnimalHerb(herb)) {
                 if (isVeganChecked) {
                     alertHtml += `<span class="tag-vegan" style="color:#c0392b; font-weight:bold; background:#fadbd8; padding:2px 4px; border-radius:3px;">🚫 純素禁忌(含動物成分)</span>`;
@@ -482,6 +494,91 @@ function calculateResult() {
             alertBox.style.display = 'none';
         }
     }
+
+    // 🌟 🆕 新增：觸發圖表渲染函數
+    if (currentUIMode === 'clinical') {
+        renderNatureChart(natureTally, grandRaw);
+    }
+}
+
+// 🌟 🆕 新增：寒熱圓餅圖渲染函數
+function renderNatureChart(tally, totalWeight) {
+    const container = document.getElementById('chartContainer');
+    const ctx = document.getElementById('natureChart');
+    if (!container || !ctx) return;
+
+    // 如果沒有處方重量，隱藏並銷毀圖表
+    if (totalWeight <= 0) {
+        container.style.display = 'none';
+        if (natureChartInstance) {
+            natureChartInstance.destroy();
+            natureChartInstance = null;
+        }
+        return;
+    }
+
+    container.style.display = 'block';
+
+    // 如果已經有圖表，先銷毀才能重繪新的
+    if (natureChartInstance) {
+        natureChartInstance.destroy();
+    }
+
+    const dataValues = [tally["寒"], tally["涼"], tally["平"], tally["溫"], tally["熱"]];
+    const labels = ["寒性", "涼性", "平性", "溫性", "熱性"];
+    
+    // 中醫藥性對應的視覺色彩心理學
+    const backgroundColors = [
+        '#1565C0', // 寒 (深藍)
+        '#64B5F6', // 涼 (淺藍)
+        '#81C784', // 平 (綠色)
+        '#FFB300', // 溫 (橘色)
+        '#C62828'  // 熱 (深紅)
+    ];
+
+    natureChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: dataValues,
+                backgroundColor: backgroundColors,
+                borderWidth: 1,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: 10 },
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: { 
+                        boxWidth: 12, 
+                        font: { size: 12, family: 'sans-serif' } 
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed !== null) {
+                                label += context.parsed.toFixed(2) + ' g';
+                                // 計算百分比
+                                let percentage = (context.parsed / totalWeight * 100).toFixed(1) + '%';
+                                label += ' (' + percentage + ')';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
 
 // 🌟 方劑雷達：鎖定兩家藥廠推導
@@ -571,7 +668,7 @@ function runAI_Radar(compositionArray, doseHerbsMap) {
     });
 }
 
-// 🌟 共用工具函數：計算權重係數 
+// 🌟 共用工具函數：計算權重係數 (新擴充的 ai-analysis.js 也會用到)
 function getHerbCoefficient(item, herbName) {
     let fw = (item.concTotalWeight / (item.ratio || 1)) + item.rawTotalWeight + item.excTotalWeight;
     if(fw <= 0) fw = 0.0001;
