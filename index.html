@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="style.css">
     
     <script src="papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -139,6 +140,11 @@
                 <div id="clinicalResultBox">
                     <h3>📊 原藥材換算結果</h3>
                     <p style="font-size: 13px; color: #666;">此為您開立處方的「原藥材本質」。各藥材下方標示其來源方劑縮寫。</p>
+                    
+                    <div id="chartContainer" style="width: 100%; max-width: 250px; margin: 15px auto; display: none;">
+                        <canvas id="natureChart"></canvas>
+                    </div>
+
                     <ul class="result-list" id="resultList"></ul>
                     <div id="incompatAlertBox" class="incompat-alert-box"></div>
                     <div class="total-weight" id="totalWeightDisplay" style="border-top: 2px solid #333; padding-top:10px;">總生藥重量: 0.00 g</div>
@@ -212,6 +218,9 @@
             </div>
         </div>
     </div>
+    
+    <script src="herb-data.js"></script>
+    
     <script src="app.js"></script>
     
     <script src="ai-analysis.js"></script>
