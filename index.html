@@ -91,6 +91,10 @@
                             <input type="checkbox" id="dopingToggle" style="width:16px; height:16px;" onchange="calculateResult()">
                             🏃 運動員禁藥 (WADA) 警示
                         </label>
+                        <label style="font-size:14px; color:#2e7d32; cursor:pointer; display:flex; align-items:center; gap:5px;">
+                            <input type="checkbox" id="veganToggle" style="width:16px; height:16px;" onchange="calculateResult()">
+                            🌱 純素禁忌 (含動物成分) 警示
+                        </label>
                     </div>
                 </div>
 
@@ -111,13 +115,6 @@
                                 <option value="compact" selected>骨架精簡模式 (原比重加權，追求總品項最少)</option>
                                 <option value="elegant">臨床優雅模式 (鼓勵經典疊方、重懲減藥)</option>
                             </select>
-                        </label>
-                    </div>
-
-                    <div style="margin-bottom: 12px; background: #e8f5e9; padding: 8px; border-radius: 4px; border: 1px solid #c8e6c9;">
-                        <label style="font-size:14px; color:#2e7d32; font-weight:bold; cursor:pointer; display: flex; align-items: center; gap: 8px;">
-                            <input type="checkbox" id="veganModeToggle" style="width:18px; height:18px;" onchange="runEducationalAnalysis()">
-                            🌱 純素友善模式 (過濾動物性方藥)
                         </label>
                     </div>
 
@@ -215,10 +212,8 @@
             </div>
         </div>
     </div>
-    <!-- 🌟 引入核心大腦程式碼 (必須在最上面) -->
     <script src="app.js"></script>
     
-    <!-- 🌟 引入 AI 分析擴充模組 -->
     <script src="ai-analysis.js"></script>
 </body>
 </html>
