@@ -419,6 +419,10 @@ function calculateResult() {
     const dopingToggle = document.getElementById('dopingToggle');
     const isDopingChecked = dopingToggle ? dopingToggle.checked : false;
 
+    // 🆕 新增：抓取純素防呆的切換開關
+    const veganToggle = document.getElementById('veganToggle');
+    const isVeganChecked = veganToggle ? veganToggle.checked : false;
+
     const list = document.getElementById('resultList'); 
     if(!list) return;
     list.innerHTML = '';
@@ -430,7 +434,15 @@ function calculateResult() {
             let fullSourceNames = sourceNamesArray.map(name => getCleanDisplayName(name)).join('、');
             let abbrTags = sourceNamesArray.map(name => `<span class="source-abbr">${getAbbrName(name)}</span>`).join('');
 
-            if (isAnimalHerb(herb)) alertHtml += `<span class="tag-animal">🍖 動物類</span>`;
+            // 🆕 判斷純素禁忌或顯示一般動物類標籤
+            if (isAnimalHerb(herb)) {
+                if (isVeganChecked) {
+                    alertHtml += `<span class="tag-vegan" style="color:#c0392b; font-weight:bold; background:#fadbd8; padding:2px 4px; border-radius:3px;">🚫 純素禁忌(含動物成分)</span>`;
+                } else {
+                    alertHtml += `<span class="tag-animal">🍖 動物類</span>`;
+                }
+            }
+
             if (herb === "牛膝(需確認川/懷)" || herb === "薑(需確認生/乾)") alertHtml += `<span class="niuxi-alert">⚠️ 來自【${fullSourceNames}】，請確認</span>`;
             if(toxicAlerts[herb] && finalHerbs[herb] > toxicAlerts[herb].max) alertHtml += `<span class="toxic-alert">⚠️ 超量 (來自: ${fullSourceNames})</span>`;
             
@@ -559,7 +571,7 @@ function runAI_Radar(compositionArray, doseHerbsMap) {
     });
 }
 
-// 🌟 共用工具函數：計算權重係數 (新擴充的 ai-analysis.js 也會用到)
+// 🌟 共用工具函數：計算權重係數 
 function getHerbCoefficient(item, herbName) {
     let fw = (item.concTotalWeight / (item.ratio || 1)) + item.rawTotalWeight + item.excTotalWeight;
     if(fw <= 0) fw = 0.0001;
