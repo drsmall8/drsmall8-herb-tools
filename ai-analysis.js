@@ -44,19 +44,6 @@ function runEducationalAnalysis() {
     }
     if (targetHerbNames.length === 0) return;
 
-    const veganToggle = document.getElementById('veganModeToggle');
-    const isVeganMode = veganToggle ? veganToggle.checked : false;
-    
-    // isAnimalHerb 來自 app.js
-    if (isVeganMode) {
-        let animalTargets = targetHerbNames.filter(h => isAnimalHerb(h));
-        if (animalTargets.length > 0) {
-            alert(`⚠️ 您開啟了「純素友善模式」，但當前處方中包含了動物類藥材（${animalTargets.join(', ')}）。\n\nAI 將自動為您排除這些成分，僅針對「植物性藥材」進行素食骨架的重組與推薦！`);
-            targetHerbNames = targetHerbNames.filter(h => !isAnimalHerb(h));
-            for(let h of animalTargets) delete netTargets[h];
-        }
-    }
-
     // 🌟 AI 模擬分析基準：預設以港香蘭為推導主軸
     let targetSimulationBrand = "港香蘭"; 
     const checkedCategories = Array.from(document.querySelectorAll('.category-cb:checked')).map(cb => cb.value);
@@ -65,7 +52,6 @@ function runEducationalAnalysis() {
     let validDB = database.filter(item => {
         if (!item.brand.includes(targetSimulationBrand) || item.isWarning || item.ratio <= 0) return false;
         if (!checkedCategories.includes(item.category)) return false; 
-        if (isVeganMode && item.herbArray.some(h => isAnimalHerb(h))) return false;
         return true;
     });
 
@@ -74,7 +60,6 @@ function runEducationalAnalysis() {
         validDB = database.filter(item => {
             if (!checkedBrands.includes(item.brand) || item.isWarning || item.ratio <= 0) return false;
             if (!checkedCategories.includes(item.category)) return false; 
-            if (isVeganMode && item.herbArray.some(h => isAnimalHerb(h))) return false;
             return true;
         });
     }
@@ -192,7 +177,7 @@ function runEducationalAnalysis() {
         if (unsupportHerbs.length > 0) {
             failDiagnostic += `💡 <strong>診斷原因：</strong>目前處方包含無單味科中支援的成分：<span style="color:#d32f2f; font-weight:bold;">${unsupportHerbs.join(', ')}</span>。導致等效劑量矩陣無法閉合。請嘗試切換至「結構啟發」面板觀看骨架建議！`;
         } else {
-            failDiagnostic += `💡 <strong>診斷原因：</strong>勾選的廠牌與劑型限制過窄或開啟了純素模式，現有庫存無法覆蓋生藥種類。`;
+            failDiagnostic += `💡 <strong>診斷原因：</strong>勾選的廠牌與劑型限制過窄，現有庫存無法覆蓋生藥種類。`;
         }
         if(optList) optList.innerHTML = `<p style="color:#d32f2f; line-height:1.6; font-size:14px;">${failDiagnostic}</p>`;
     } else {
@@ -200,22 +185,22 @@ function runEducationalAnalysis() {
             let itemsHtml = '';
             plan.combination.forEach(c => {
                 let tag = c.item.uniqueHerbCount === 1 ? '單方' : '複方';
-                // 使用 app.js 的 getHoverCardHTML
+                // 🆕 移除了 [廠牌] 的顯示，版面更簡潔
                 itemsHtml += `
                     <div class="plan-item">
                         <div class="has-hover" onclick="toggleMobileCard(this)" style="display:inline-block;">
-                            <span>[${c.item.brand}] <strong>${c.item.name}</strong> <small>(${tag})</small></span>
+                            <span><strong>${c.item.name}</strong> <small>(${tag})</small></span>
                             ${getHoverCardHTML(c.item)}
                         </div>
                         <span><strong>${c.dose} g</strong></span>
                     </div>`;
             });
 
+            // 🆕 移除了套用按鈕
             if(optList) optList.innerHTML += `
                 <div class="plan-card">
                     <div class="plan-header">
                         <span class="plan-title">方案 ${index + 1}：${plan.title}</span>
-                        <button class="apply-btn" onclick="applyPlan(${index})">套用此等效劑量</button>
                     </div>
                     <div>${itemsHtml}</div>
                 </div>`;
@@ -436,33 +421,4 @@ function runEducationalAnalysis() {
     if(analysisArea) analysisArea.style.display = 'block';
     
     switchTab(activeTab); 
-}
-
-function applyPlan(index) {
-    let plan = generatedTeachingPlans.filter(p => !p.isPureSingle).slice(0,4);
-    let pureSinglePlan = generatedTeachingPlans.find(p => p.isPureSingle);
-    if (pureSinglePlan) plan.push(pureSinglePlan);
-    
-    let selectedPlan = plan[index];
-    if (!selectedPlan) return;
-
-    prescription = [];
-    selectedPlan.combination.forEach(c => {
-        prescription.push({ ...c.item, dose: c.dose });
-    });
-    
-    // 更新 app.js 裡的全域狀態
-    if (currentUIMode === 'clinical') {
-        prescriptionClinical = prescription;
-    } else {
-        prescriptionLearning = prescription;
-    }
-
-    renderPrescription(); // 呼叫 app.js 的渲染函數
-    calculateResult();    // 呼叫 app.js 的計算函數
-    
-    const analysisArea = document.getElementById('analysisResultArea');
-    if(analysisArea) analysisArea.style.display = 'none';
-    
-    alert("✅ 已成功替換為教學建議處方！");
 }
