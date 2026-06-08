@@ -17,7 +17,7 @@ let currentUIMode = 'clinical';
 let isComposing = false;
 let searchDebounceTimer = null;
 
-// 🌟 🆕 新增：全域圖表實例變數，用來控制圓餅圖的更新與銷毀
+// 🌟 全域圖表實例變數，用來控制圓餅圖的更新與銷毀
 let natureChartInstance = null;
 
 const herbDictionary = {
@@ -387,8 +387,9 @@ function calculateResult() {
     let herbSources = {}; 
     let pureCompositionHerbs = new Set();
     
-    // 🌟 🆕 新增：用於統計寒熱藥性的撲滿
+    // 用於統計寒熱藥性的撲滿與未建檔清單
     let natureTally = { "寒": 0, "涼": 0, "平": 0, "溫": 0, "熱": 0 };
+    let neutralHerbsList = [];
 
     prescription.forEach(p => {
         p.herbArray.forEach(h => pureCompositionHerbs.add(h)); 
@@ -439,12 +440,24 @@ function calculateResult() {
             let fullSourceNames = sourceNamesArray.map(name => getCleanDisplayName(name)).join('、');
             let abbrTags = sourceNamesArray.map(name => `<span class="source-abbr">${getAbbrName(name)}</span>`).join('');
 
-            // 🌟 🆕 新增：計算寒熱屬性
-            let herbNature = window.herbNatureDictionary ? (window.herbNatureDictionary[herb] || "平") : "平";
+            // 🌟 🆕 修正：過濾括號後綴，精準匹配藥名
+            let lookupName = herb.replace(/[\(（]需確認.*?[\)）]/g, '').trim();
+            let herbNature = "平";
+            if (window.herbNatureDictionary) {
+                if (window.herbNatureDictionary[lookupName]) {
+                    herbNature = window.herbNatureDictionary[lookupName];
+                } else if (window.herbNatureDictionary[getCoreHerbName(lookupName)]) {
+                    herbNature = window.herbNatureDictionary[getCoreHerbName(lookupName)];
+                }
+            }
+
             if (natureTally[herbNature] !== undefined) {
                 natureTally[herbNature] += finalHerbs[herb];
-            } else {
-                natureTally["平"] += finalHerbs[herb];
+            }
+            
+            // 將真正被歸類為平性的「植物類」藥材記錄下來，方便除錯
+            if (herbNature === "平" && !isAnimalHerb(herb)) {
+                neutralHerbsList.push(lookupName);
             }
 
             if (isAnimalHerb(herb)) {
@@ -495,21 +508,23 @@ function calculateResult() {
         }
     }
 
-    // 🌟 🆕 新增：觸發圖表渲染函數
+    // 🌟 🆕 觸發圖表與除錯名單渲染
     if (currentUIMode === 'clinical') {
-        renderNatureChart(natureTally, grandRaw);
+        renderNatureChart(natureTally, grandRaw, neutralHerbsList);
     }
 }
 
-// 🌟 🆕 新增：寒熱圓餅圖渲染函數
-function renderNatureChart(tally, totalWeight) {
+// 🌟 🆕 修正：寒熱圓餅圖渲染與平性藥物除錯輸出
+function renderNatureChart(tally, totalWeight, neutralList) {
     const container = document.getElementById('chartContainer');
     const ctx = document.getElementById('natureChart');
+    const logDiv = document.getElementById('neutralHerbsLog');
+    
     if (!container || !ctx) return;
 
-    // 如果沒有處方重量，隱藏並銷毀圖表
     if (totalWeight <= 0) {
         container.style.display = 'none';
+        if (logDiv) logDiv.style.display = 'none';
         if (natureChartInstance) {
             natureChartInstance.destroy();
             natureChartInstance = null;
@@ -518,8 +533,16 @@ function renderNatureChart(tally, totalWeight) {
     }
 
     container.style.display = 'block';
+    
+    if (logDiv) {
+        if (neutralList && neutralList.length > 0) {
+            logDiv.innerHTML = `💡 <strong>下列藥物系統判定為平性 (含西藥成分或未收錄單方)：</strong><br>${neutralList.join('、')}`;
+            logDiv.style.display = 'block';
+        } else {
+            logDiv.style.display = 'none';
+        }
+    }
 
-    // 如果已經有圖表，先銷毀才能重繪新的
     if (natureChartInstance) {
         natureChartInstance.destroy();
     }
@@ -527,7 +550,6 @@ function renderNatureChart(tally, totalWeight) {
     const dataValues = [tally["寒"], tally["涼"], tally["平"], tally["溫"], tally["熱"]];
     const labels = ["寒性", "涼性", "平性", "溫性", "熱性"];
     
-    // 中醫藥性對應的視覺色彩心理學
     const backgroundColors = [
         '#1565C0', // 寒 (深藍)
         '#64B5F6', // 涼 (淺藍)
@@ -568,7 +590,6 @@ function renderNatureChart(tally, totalWeight) {
                             }
                             if (context.parsed !== null) {
                                 label += context.parsed.toFixed(2) + ' g';
-                                // 計算百分比
                                 let percentage = (context.parsed / totalWeight * 100).toFixed(1) + '%';
                                 label += ' (' + percentage + ')';
                             }
