@@ -158,7 +158,7 @@ function switchMainMode(mode) {
     calculateResult(); 
 }
 
-// 🌟 開發者內部工具：全單味藥物統計渲染
+// 🌟 開發者內部工具：全單味藥物統計渲染 (加入排序切換功能)
 function renderStats() {
     let herbData = {}; 
     
@@ -183,19 +183,36 @@ function renderStats() {
         count: herbData[h].count,
         sources: herbData[h].sources
     }));
-    sortedHerbs.sort((a, b) => a.name.localeCompare(b.name, 'zh-TW'));
+
+    // 🌟 判斷下拉選單的排序模式
+    const sortSelect = document.getElementById('statsSortSelect');
+    const sortMode = sortSelect ? sortSelect.value : 'bopomofo';
+
+    if (sortMode === 'count') {
+        // 📉 模式：依頻率多到少排列 (若數量相同，則依注音輔助排列)
+        sortedHerbs.sort((a, b) => {
+            if (b.count !== a.count) return b.count - a.count;
+            return a.name.localeCompare(b.name, 'zh-TW');
+        });
+    } else {
+        // 🔤 模式：嚴格依據注音符號順序
+        sortedHerbs.sort((a, b) => a.name.localeCompare(b.name, 'zh-TW'));
+    }
 
     const listDiv = document.getElementById('statsListArea');
     if (listDiv) {
-        listDiv.innerHTML = sortedHerbs.map(h => {
+        listDiv.innerHTML = sortedHerbs.map((h, index) => {
             let displaySources = h.sources.slice(0, 2).join('、');
             if (h.sources.length > 2) displaySources += ' 等...';
             let sourcesHtml = `<div style="font-size:12px; color:#e74c3c; font-weight:normal; margin-top:5px; line-height:1.4;">📍 來源參考：${displaySources}</div>`;
             
+            // 加入名次標籤 (僅在頻率排序時凸顯)
+            let rankTag = sortMode === 'count' ? `<span style="font-size:11px; color:#bdc3c7; margin-right:5px;">#${index + 1}</span>` : '';
+
             return `
                 <div class="stat-item">
                     <div>
-                        <span>🌿 ${h.name}</span>
+                        <span>${rankTag}🌿 ${h.name}</span>
                         ${sourcesHtml}
                     </div>
                     <span class="stat-count">${h.count} 個複方</span>
@@ -440,7 +457,7 @@ function calculateResult() {
             let fullSourceNames = sourceNamesArray.map(name => getCleanDisplayName(name)).join('、');
             let abbrTags = sourceNamesArray.map(name => `<span class="source-abbr">${getAbbrName(name)}</span>`).join('');
 
-            // 🌟 🆕 修正：過濾括號後綴，精準匹配藥名
+            // 過濾括號後綴，精準匹配藥名
             let lookupName = herb.replace(/[\(（]需確認.*?[\)）]/g, '').trim();
             let herbNature = "平";
             if (window.herbNatureDictionary) {
@@ -508,13 +525,13 @@ function calculateResult() {
         }
     }
 
-    // 🌟 🆕 觸發圖表與除錯名單渲染
+    // 觸發圖表與除錯名單渲染
     if (currentUIMode === 'clinical') {
         renderNatureChart(natureTally, grandRaw, neutralHerbsList);
     }
 }
 
-// 🌟 🆕 修正：寒熱圓餅圖渲染與平性藥物除錯輸出
+// 🌟 寒熱圓餅圖渲染與平性藥物除錯輸出
 function renderNatureChart(tally, totalWeight, neutralList) {
     const container = document.getElementById('chartContainer');
     const ctx = document.getElementById('natureChart');
