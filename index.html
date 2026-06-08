@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="style.css">
     
     <script src="papaparse.min.js"></script>
+    <!-- 引入 Chart.js 圖表庫 -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -141,13 +142,15 @@
                     <h3>📊 原藥材換算結果</h3>
                     <p style="font-size: 13px; color: #666;">此為您開立處方的「原藥材本質」。各藥材下方標示其來源方劑縮寫。</p>
                     
+                    <!-- 寒熱圓餅圖區塊 -->
                     <details id="natureChartDetails" style="margin: 15px 0; background: #fff; padding: 10px; border-radius: 6px; border: 1px solid #e0e0e0;">
                         <summary style="cursor: pointer; font-weight: bold; color: #d35400; outline: none;">📊 處方寒熱藥性分析 (點擊展開)</summary>
                         <div id="chartContainer" style="width: 100%; max-width: 250px; margin: 15px auto; display: none;">
                             <canvas id="natureChart"></canvas>
                         </div>
                         <div id="neutralHerbsLog" style="font-size: 12px; color: #7f8c8d; margin-top: 10px; text-align: center; border-top: 1px dashed #ccc; padding-top: 8px; display: none;">
-                            </div>
+                            <!-- 這裡會自動列出被歸類為平性的藥物 -->
+                        </div>
                     </details>
 
                     <ul class="result-list" id="resultList"></ul>
@@ -172,14 +175,25 @@
 
         <div class="container" id="statsUIContainer" style="display:none; flex-direction:column; max-width:900px; margin: 0 auto;">
             <div class="column" style="width:100%;">
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; margin-bottom: 20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; margin-bottom: 10px;">
                     <h2 style="margin:0; color:#2c3e50;">📊 資料庫全單味藥出現頻率透視 (除錯工具)</h2>
                     <button class="apply-btn" onclick="switchMainMode('clinical')">🔙 返回換算系統</button>
                 </div>
-                <p style="color:#666; font-size:14px; line-height:1.5;">
-                    此功能會掃描全資料庫內所有的<strong>複方組成</strong>，加總統計各單味藥在多少個方劑中被使用，並嚴格依據<strong>注音符號順序</strong>進行排列。<br>
-                    <strong>💡 檢查要點：</strong>若在附近位置看見同音異名（如「當歸」與「當歸身」同時獨立出現），代表您的雲端試算表字典需要進行對應異名合併。
-                </p>
+                
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+                    <p style="color:#666; font-size:14px; line-height:1.5; margin:0; flex:1; min-width:300px;">
+                        此功能會掃描全資料庫內所有的<strong>複方組成</strong>，加總統計各單味藥在多少個方劑中被使用。<br>
+                        <strong>💡 除錯檢查要點：</strong>切換至「依注音」時，若在附近位置看見同音異名（如「當歸」與「當歸身」），請至雲端試算表進行異名合併。
+                    </p>
+                    <div style="background:#f4f6f7; padding:8px 12px; border-radius:6px; border:1px solid #dcdde1; display:flex; align-items:center; gap:8px;">
+                        <label style="font-size:14px; font-weight:bold; color:#2c3e50; cursor:pointer;" for="statsSortSelect">排列方式：</label>
+                        <select id="statsSortSelect" onchange="renderStats()" style="padding:4px 8px; font-size:14px; border:1px solid #bdc3c7; border-radius:4px; outline:none; cursor:pointer;">
+                            <option value="bopomofo" selected>🔤 依注音符號順序 (預設)</option>
+                            <option value="count">📉 依出現頻率 (多 ➔ 少)</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div id="statsListArea" class="stats-grid"></div>
             </div>
         </div>
@@ -224,8 +238,13 @@
         </div>
     </div>
     
+    <!-- 引入獨立資料字典 (必須在 app.js 之前) -->
     <script src="herb-data.js"></script>
+    
+    <!-- 引入核心大腦程式碼 -->
     <script src="app.js"></script>
+    
+    <!-- 引入 AI 分析擴充模組 -->
     <script src="ai-analysis.js"></script>
 </body>
 </html>
