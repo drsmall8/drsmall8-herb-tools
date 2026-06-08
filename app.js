@@ -184,18 +184,15 @@ function renderStats() {
         sources: herbData[h].sources
     }));
 
-    // 🌟 判斷下拉選單的排序模式
     const sortSelect = document.getElementById('statsSortSelect');
     const sortMode = sortSelect ? sortSelect.value : 'bopomofo';
 
     if (sortMode === 'count') {
-        // 📉 模式：依頻率多到少排列 (若數量相同，則依注音輔助排列)
         sortedHerbs.sort((a, b) => {
             if (b.count !== a.count) return b.count - a.count;
             return a.name.localeCompare(b.name, 'zh-TW');
         });
     } else {
-        // 🔤 模式：嚴格依據注音符號順序
         sortedHerbs.sort((a, b) => a.name.localeCompare(b.name, 'zh-TW'));
     }
 
@@ -206,7 +203,6 @@ function renderStats() {
             if (h.sources.length > 2) displaySources += ' 等...';
             let sourcesHtml = `<div style="font-size:12px; color:#e74c3c; font-weight:normal; margin-top:5px; line-height:1.4;">📍 來源參考：${displaySources}</div>`;
             
-            // 加入名次標籤 (僅在頻率排序時凸顯)
             let rankTag = sortMode === 'count' ? `<span style="font-size:11px; color:#bdc3c7; margin-right:5px;">#${index + 1}</span>` : '';
 
             return `
@@ -319,7 +315,6 @@ function renderDrugs(drugs) {
     }
 }
 
-// 🌟 實際過濾邏輯
 function actualFilterDrugs() {
     const searchInput = document.getElementById('searchInput');
     if(!searchInput) return;
@@ -341,7 +336,6 @@ function actualFilterDrugs() {
     renderDrugs(filteredData);
 }
 
-// 🌟 防抖過濾器 (唯一版本)
 function filterDrugs() {
     if (isComposing) return;
     clearTimeout(searchDebounceTimer);
@@ -404,8 +398,14 @@ function calculateResult() {
     let herbSources = {}; 
     let pureCompositionHerbs = new Set();
     
-    // 用於統計寒熱藥性的撲滿與未建檔清單
-    let natureTally = { "寒": 0, "涼": 0, "平": 0, "溫": 0, "熱": 0 };
+    // 🌟 🆕 修改：將單一數字撲滿，升級為包含明細陣列的進階撲滿
+    let natureDetails = { 
+        "寒": { total: 0, herbs: [] }, 
+        "涼": { total: 0, herbs: [] }, 
+        "平": { total: 0, herbs: [] }, 
+        "溫": { total: 0, herbs: [] }, 
+        "熱": { total: 0, herbs: [] } 
+    };
     let neutralHerbsList = [];
 
     prescription.forEach(p => {
@@ -450,6 +450,7 @@ function calculateResult() {
     if(!list) return;
     list.innerHTML = '';
     
+    // 將藥材依據劑量由大到小排序後進行處理，這樣 tooltip 清單也會照劑量排序！
     Object.keys(finalHerbs).sort((a, b) => finalHerbs[b] - finalHerbs[a]).forEach(herb => {
         if(finalHerbs[herb] > 0.01){
             let alertHtml = '';
@@ -468,11 +469,13 @@ function calculateResult() {
                 }
             }
 
-            if (natureTally[herbNature] !== undefined) {
-                natureTally[herbNature] += finalHerbs[herb];
+            // 🌟 🆕 修改：將藥物明細推進對應的分類陣列中
+            if (natureDetails[herbNature] !== undefined) {
+                natureDetails[herbNature].total += finalHerbs[herb];
+                // 這裡組裝顯示在懸停框上的文字格式，如 "麻黃 3.2g"
+                natureDetails[herbNature].herbs.push(`${lookupName} ${finalHerbs[herb].toFixed(1)}g`);
             }
             
-            // 將真正被歸類為平性的「植物類」藥材記錄下來，方便除錯
             if (herbNature === "平" && !isAnimalHerb(herb)) {
                 neutralHerbsList.push(lookupName);
             }
@@ -525,14 +528,14 @@ function calculateResult() {
         }
     }
 
-    // 觸發圖表與除錯名單渲染
     if (currentUIMode === 'clinical') {
-        renderNatureChart(natureTally, grandRaw, neutralHerbsList);
+        // 傳遞包含明細的新物件給圖表渲染器
+        renderNatureChart(natureDetails, grandRaw, neutralHerbsList);
     }
 }
 
-// 🌟 寒熱圓餅圖渲染與平性藥物除錯輸出
-function renderNatureChart(tally, totalWeight, neutralList) {
+// 🌟 🆕 修改：升級版寒熱圖表渲染 (支援多行清單 tooltip)
+function renderNatureChart(details, totalWeight, neutralList) {
     const container = document.getElementById('chartContainer');
     const ctx = document.getElementById('natureChart');
     const logDiv = document.getElementById('neutralHerbsLog');
@@ -564,7 +567,9 @@ function renderNatureChart(tally, totalWeight, neutralList) {
         natureChartInstance.destroy();
     }
 
-    const dataValues = [tally["寒"], tally["涼"], tally["平"], tally["溫"], tally["熱"]];
+    // 將資料抽離成陣列供 Chart.js 使用
+    const dataValues = [details["寒"].total, details["涼"].total, details["平"].total, details["溫"].total, details["熱"].total];
+    const herbLists = [details["寒"].herbs, details["涼"].herbs, details["平"].herbs, details["溫"].herbs, details["熱"].herbs];
     const labels = ["寒性", "涼性", "平性", "溫性", "熱性"];
     
     const backgroundColors = [
@@ -598,19 +603,30 @@ function renderNatureChart(tally, totalWeight, neutralList) {
                         font: { size: 12, family: 'sans-serif' } 
                     }
                 },
+                // 🌟 核心魔法：客製化懸停顯示框
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            let label = context.label || '';
-                            if (label) {
-                                label += ': ';
+                            let index = context.dataIndex; // 知道滑鼠停在哪個顏色 (0~4)
+                            let parsed = context.parsed;   // 拿到該顏色的總克數
+                            if (parsed === 0) return null; 
+                            
+                            // 算百分比
+                            let percentage = (parsed / totalWeight * 100).toFixed(1) + '%';
+                            
+                            // 第一行：標題與總重量
+                            let lines = [];
+                            lines.push(`${context.label}: ${parsed.toFixed(2)} g (${percentage})`);
+                            
+                            // 抓出這個顏色底下的所有藥材清單
+                            let herbs = herbLists[index];
+                            if (herbs && herbs.length > 0) {
+                                lines.push('-------------------'); // 分隔線
+                                // 把藥材一筆一筆推進去，變成條列式清單
+                                herbs.forEach(h => lines.push(` ▸ ${h}`));
                             }
-                            if (context.parsed !== null) {
-                                label += context.parsed.toFixed(2) + ' g';
-                                let percentage = (context.parsed / totalWeight * 100).toFixed(1) + '%';
-                                label += ' (' + percentage + ')';
-                            }
-                            return label;
+                            // 回傳陣列，Chart.js 就會自動幫你排版成完美的多行清單！
+                            return lines;
                         }
                     }
                 }
