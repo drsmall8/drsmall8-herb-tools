@@ -4,7 +4,6 @@
 // ==========================================
 const googleSheetCsvUrl = "database.csv";
 
-// 🌟 全域變數 (供其他擴充 JS 讀取)
 let database = []; 
 let prescriptionClinical = []; 
 let prescriptionLearning = []; 
@@ -17,7 +16,6 @@ let currentUIMode = 'clinical';
 let isComposing = false;
 let searchDebounceTimer = null;
 
-// 🌟 全域圖表實例變數，用來控制圓餅圖的更新與銷毀
 let natureChartInstance = null;
 
 const herbDictionary = {
@@ -96,7 +94,6 @@ function toggleMobileCard(element) {
     }
 }
 
-// 🌟 模式切換
 function switchMainMode(mode) {
     currentUIMode = mode;
     
@@ -158,7 +155,6 @@ function switchMainMode(mode) {
     calculateResult(); 
 }
 
-// 🌟 開發者內部工具：全單味藥物統計渲染 (加入排序切換功能)
 function renderStats() {
     let herbData = {}; 
     
@@ -218,7 +214,6 @@ function renderStats() {
     }
 }
 
-// 🌟 載入資料庫
 function loadCloudDatabase() {
     const statusMessage = document.getElementById('statusMessage');
     Papa.parse(googleSheetCsvUrl, {
@@ -398,7 +393,6 @@ function calculateResult() {
     let herbSources = {}; 
     let pureCompositionHerbs = new Set();
     
-    // 🌟 🆕 修改：將單一數字撲滿，升級為包含明細陣列的進階撲滿
     let natureDetails = { 
         "寒": { total: 0, herbs: [] }, 
         "涼": { total: 0, herbs: [] }, 
@@ -406,7 +400,6 @@ function calculateResult() {
         "溫": { total: 0, herbs: [] }, 
         "熱": { total: 0, herbs: [] } 
     };
-    let neutralHerbsList = [];
 
     prescription.forEach(p => {
         p.herbArray.forEach(h => pureCompositionHerbs.add(h)); 
@@ -450,7 +443,6 @@ function calculateResult() {
     if(!list) return;
     list.innerHTML = '';
     
-    // 將藥材依據劑量由大到小排序後進行處理，這樣 tooltip 清單也會照劑量排序！
     Object.keys(finalHerbs).sort((a, b) => finalHerbs[b] - finalHerbs[a]).forEach(herb => {
         if(finalHerbs[herb] > 0.01){
             let alertHtml = '';
@@ -458,7 +450,6 @@ function calculateResult() {
             let fullSourceNames = sourceNamesArray.map(name => getCleanDisplayName(name)).join('、');
             let abbrTags = sourceNamesArray.map(name => `<span class="source-abbr">${getAbbrName(name)}</span>`).join('');
 
-            // 過濾括號後綴，精準匹配藥名
             let lookupName = herb.replace(/[\(（]需確認.*?[\)）]/g, '').trim();
             let herbNature = "平";
             if (window.herbNatureDictionary) {
@@ -469,15 +460,9 @@ function calculateResult() {
                 }
             }
 
-            // 🌟 🆕 修改：將藥物明細推進對應的分類陣列中
             if (natureDetails[herbNature] !== undefined) {
                 natureDetails[herbNature].total += finalHerbs[herb];
-                // 這裡組裝顯示在懸停框上的文字格式，如 "麻黃 3.2g"
                 natureDetails[herbNature].herbs.push(`${lookupName} ${finalHerbs[herb].toFixed(1)}g`);
-            }
-            
-            if (herbNature === "平" && !isAnimalHerb(herb)) {
-                neutralHerbsList.push(lookupName);
             }
 
             if (isAnimalHerb(herb)) {
@@ -529,22 +514,20 @@ function calculateResult() {
     }
 
     if (currentUIMode === 'clinical') {
-        // 傳遞包含明細的新物件給圖表渲染器
-        renderNatureChart(natureDetails, grandRaw, neutralHerbsList);
+        renderNatureChart(natureDetails, grandRaw);
     }
 }
 
-// 🌟 🆕 修改：升級版寒熱圖表渲染 (支援多行清單 tooltip)
-function renderNatureChart(details, totalWeight, neutralList) {
+function renderNatureChart(details, totalWeight) {
     const container = document.getElementById('chartContainer');
     const ctx = document.getElementById('natureChart');
-    const logDiv = document.getElementById('neutralHerbsLog');
+    const scaleBox = document.getElementById('thermalScaleBox'); 
     
-    if (!container || !ctx) return;
+    if (!container || !ctx || !scaleBox) return;
 
     if (totalWeight <= 0) {
         container.style.display = 'none';
-        if (logDiv) logDiv.style.display = 'none';
+        scaleBox.style.display = 'none';
         if (natureChartInstance) {
             natureChartInstance.destroy();
             natureChartInstance = null;
@@ -554,20 +537,34 @@ function renderNatureChart(details, totalWeight, neutralList) {
 
     container.style.display = 'block';
     
-    if (logDiv) {
-        if (neutralList && neutralList.length > 0) {
-            logDiv.innerHTML = `💡 <strong>下列藥物系統判定為平性 (含西藥成分或未收錄單方)：</strong><br>${neutralList.join('、')}`;
-            logDiv.style.display = 'block';
-        } else {
-            logDiv.style.display = 'none';
-        }
+    let thermalScore = 0;
+    if (totalWeight > 0) {
+        let score = (details["熱"].total * 2) + (details["溫"].total * 1) + (details["平"].total * 0) + (details["涼"].total * -1) + (details["寒"].total * -2);
+        thermalScore = score / totalWeight;
     }
+
+    if (thermalScore >= 0.5) {
+        scaleBox.innerHTML = `🔥 處方偏溫熱<div style="font-size:12px; margin-top:4px; font-weight:normal;">請留意患者是否有口乾舌燥、便祕或上火現象。</div>`;
+        scaleBox.style.backgroundColor = '#fbe9e7';
+        scaleBox.style.color = '#d84315';
+        scaleBox.style.border = '1px solid #ffccbc';
+    } else if (thermalScore <= -0.5) {
+        scaleBox.innerHTML = `❄️ 處方偏涼寒<div style="font-size:12px; margin-top:4px; font-weight:normal;">請留意患者脾胃是否虛寒、易腹瀉或怕冷。</div>`;
+        scaleBox.style.backgroundColor = '#e3f2fd';
+        scaleBox.style.color = '#1565c0';
+        scaleBox.style.border = '1px solid #bbdefb';
+    } else {
+        scaleBox.innerHTML = `🌿 處方寒熱平衡<div style="font-size:12px; margin-top:4px; font-weight:normal;">藥性溫和，適合一般體質或長期調理。</div>`;
+        scaleBox.style.backgroundColor = '#e8f5e9';
+        scaleBox.style.color = '#2e7d32';
+        scaleBox.style.border = '1px solid #c8e6c9';
+    }
+    scaleBox.style.display = 'block';
 
     if (natureChartInstance) {
         natureChartInstance.destroy();
     }
 
-    // 將資料抽離成陣列供 Chart.js 使用
     const dataValues = [details["寒"].total, details["涼"].total, details["平"].total, details["溫"].total, details["熱"].total];
     const herbLists = [details["寒"].herbs, details["涼"].herbs, details["平"].herbs, details["溫"].herbs, details["熱"].herbs];
     const labels = ["寒性", "涼性", "平性", "溫性", "熱性"];
@@ -603,29 +600,23 @@ function renderNatureChart(details, totalWeight, neutralList) {
                         font: { size: 12, family: 'sans-serif' } 
                     }
                 },
-                // 🌟 核心魔法：客製化懸停顯示框
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            let index = context.dataIndex; // 知道滑鼠停在哪個顏色 (0~4)
-                            let parsed = context.parsed;   // 拿到該顏色的總克數
+                            let index = context.dataIndex;
+                            let parsed = context.parsed;
                             if (parsed === 0) return null; 
                             
-                            // 算百分比
                             let percentage = (parsed / totalWeight * 100).toFixed(1) + '%';
                             
-                            // 第一行：標題與總重量
                             let lines = [];
                             lines.push(`${context.label}: ${parsed.toFixed(2)} g (${percentage})`);
                             
-                            // 抓出這個顏色底下的所有藥材清單
                             let herbs = herbLists[index];
                             if (herbs && herbs.length > 0) {
-                                lines.push('-------------------'); // 分隔線
-                                // 把藥材一筆一筆推進去，變成條列式清單
+                                lines.push('-------------------');
                                 herbs.forEach(h => lines.push(` ▸ ${h}`));
                             }
-                            // 回傳陣列，Chart.js 就會自動幫你排版成完美的多行清單！
                             return lines;
                         }
                     }
@@ -635,7 +626,6 @@ function renderNatureChart(details, totalWeight, neutralList) {
     });
 }
 
-// 🌟 方劑雷達：鎖定兩家藥廠推導
 function runAI_Radar(compositionArray, doseHerbsMap) {
     const targetDisplay = document.getElementById('radarTargetHerbs');
     const radarList = document.getElementById('radarResultsList');
@@ -699,7 +689,7 @@ function runAI_Radar(compositionArray, doseHerbsMap) {
     let topResults = results.slice(0, 10);
 
     if (topResults.length === 0) {
-        radarList.innerHTML = '<p style="color:#d32f2f;">無法推導：組合太過獨特，查無關聯經典方劑。</p>';
+        radarList.innerHTML = '<p style="color:#d32f2f;">無法推導：組合太過獨特，查無關關經典方劑。</p>';
         return;
     }
 
@@ -722,7 +712,6 @@ function runAI_Radar(compositionArray, doseHerbsMap) {
     });
 }
 
-// 🌟 共用工具函數：計算權重係數 (新擴充的 ai-analysis.js 也會用到)
 function getHerbCoefficient(item, herbName) {
     let fw = (item.concTotalWeight / (item.ratio || 1)) + item.rawTotalWeight + item.excTotalWeight;
     if(fw <= 0) fw = 0.0001;
@@ -736,11 +725,9 @@ function getHerbCoefficient(item, herbName) {
     return coef;
 }
 
-// 🌟 初始化：確保畫面加載完畢再綁定事件
 window.addEventListener('DOMContentLoaded', () => {
     loadCloudDatabase();
     
-    // 綁定注音防抖事件
     const searchInputElem = document.getElementById('searchInput');
     if (searchInputElem) {
         searchInputElem.addEventListener('compositionstart', () => { isComposing = true; });
