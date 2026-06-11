@@ -227,7 +227,7 @@ function loadCloudDatabase() {
                 const category = row['分類標籤'] || '未知劑型';
                 const ratio = parseFloat(row['濃縮倍數']) || 0;
                 
-                if(brand !== '其他藥廠' && brand !== '未知藥廠') brandCounts[brand] = (brandCounts[brand] || 0) + 1;
+                if(brand !== '開源廠牌' && brand !== '未知藥廠') brandCounts[brand] = (brandCounts[brand] || 0) + 1;
                 categoryCounts[category] = (categoryCounts[category] || 0) + 1;
                 
                 const conc = parseHerbString(row['濃縮生藥組成']);
@@ -518,6 +518,7 @@ function calculateResult() {
     }
 }
 
+// 🌟 雙軸評估模型：動態寒熱與烈度運算
 function renderNatureChart(details, totalWeight) {
     const container = document.getElementById('chartContainer');
     const ctx = document.getElementById('natureChart');
@@ -537,27 +538,47 @@ function renderNatureChart(details, totalWeight) {
 
     container.style.display = 'block';
     
-    let thermalScore = 0;
-    if (totalWeight > 0) {
-        let score = (details["熱"].total * 2) + (details["溫"].total * 1) + (details["平"].total * 0) + (details["涼"].total * -1) + (details["寒"].total * -2);
-        thermalScore = score / totalWeight;
-    }
+    // 雙軸核心權重定義
+    const weights = { "熱": 4, "溫": 1, "平": 0, "涼": -1, "寒": -4 };
+    
+    let thermalSum = 0;   // 第一軸：寒熱偏向加總
+    let intensitySum = 0; // 第二軸：動能烈度加總 (絕對值)
 
-    if (thermalScore >= 0.5) {
-        scaleBox.innerHTML = `🔥 處方偏溫熱<div style="font-size:12px; margin-top:4px; font-weight:normal;">請留意患者是否有口乾舌燥、便祕或上火現象。</div>`;
-        scaleBox.style.backgroundColor = '#fbe9e7';
-        scaleBox.style.color = '#d84315';
-        scaleBox.style.border = '1px solid #ffccbc';
+    ["熱", "溫", "平", "涼", "寒"].forEach(nature => {
+        let w = details[nature].total;
+        let score = weights[nature];
+        thermalSum += w * score;
+        intensitySum += w * Math.abs(score);
+    });
+
+    let thermalScore = thermalSum / totalWeight;
+    let intensityScore = intensitySum / totalWeight;
+
+    // 動態決策樹渲染
+    if (thermalScore >= 0.8 && intensityScore >= 2.0) {
+        scaleBox.innerHTML = `🔥 大辛大熱 (攻逐寒邪之重劑)<div style="font-size:12px; margin-top:4px; font-weight:normal;">烈度極高，具有強烈溫陽散寒動能。請嚴密觀察患者上火、耗津等反應，中病即止。</div>`;
+        scaleBox.style.backgroundColor = '#fbe9e7'; scaleBox.style.color = '#c62828'; scaleBox.style.border = '1px solid #ffccbc';
+    } else if (thermalScore >= 0.5) {
+        scaleBox.innerHTML = `☀️ 處方偏溫熱<div style="font-size:12px; margin-top:4px; font-weight:normal;">具備發散溫陽之效。請留意患者是否有口乾舌燥、便祕或上火現象。</div>`;
+        scaleBox.style.backgroundColor = '#fff3e0'; scaleBox.style.color = '#e65100'; scaleBox.style.border = '1px solid #ffe0b2';
+    } else if (thermalScore <= -0.8 && intensityScore >= 2.0) {
+        scaleBox.innerHTML = `❄️ 苦寒清泄 (攻下清熱之重劑)<div style="font-size:12px; margin-top:4px; font-weight:normal;">烈度極高，具有強烈清熱瀉火動能。極易傷及脾胃陽氣，非實熱證慎用。</div>`;
+        scaleBox.style.backgroundColor = '#e8eaf6'; scaleBox.style.color = '#1a237e'; scaleBox.style.border = '1px solid #c5cae9';
     } else if (thermalScore <= -0.5) {
-        scaleBox.innerHTML = `❄️ 處方偏涼寒<div style="font-size:12px; margin-top:4px; font-weight:normal;">請留意患者脾胃是否虛寒、易腹瀉或怕冷。</div>`;
-        scaleBox.style.backgroundColor = '#e3f2fd';
-        scaleBox.style.color = '#1565c0';
-        scaleBox.style.border = '1px solid #bbdefb';
+        scaleBox.innerHTML = `💧 處方偏涼寒<div style="font-size:12px; margin-top:4px; font-weight:normal;">具備清熱生津之效。請留意患者脾胃是否虛寒、易腹瀉或怕冷。</div>`;
+        scaleBox.style.backgroundColor = '#e3f2fd'; scaleBox.style.color = '#1565c0'; scaleBox.style.border = '1px solid #bbdefb';
     } else {
-        scaleBox.innerHTML = `🌿 處方寒熱平衡<div style="font-size:12px; margin-top:4px; font-weight:normal;">藥性溫和，適合一般體質或長期調理。</div>`;
-        scaleBox.style.backgroundColor = '#e8f5e9';
-        scaleBox.style.color = '#2e7d32';
-        scaleBox.style.border = '1px solid #c8e6c9';
+        // 第一軸落在平衡區 (-0.5 ~ 0.5)
+        if (intensityScore >= 2.0) {
+            scaleBox.innerHTML = `⚡ 寒熱並用 (強烈動能之劑)<div style="font-size:12px; margin-top:4px; font-weight:normal;">處方總體寒熱平衡，但內部含有強烈對立之大寒大熱藥材。此屬辛開苦降或攻邪治病之重劑，切勿視為保養藥長期調理。</div>`;
+            scaleBox.style.backgroundColor = '#fff9c4'; scaleBox.style.color = '#f57f17'; scaleBox.style.border = '1px solid #fff59d';
+        } else if (intensityScore >= 0.8) {
+            scaleBox.innerHTML = `💨 寒熱兼調 (具備中等動能)<div style="font-size:12px; margin-top:4px; font-weight:normal;">本處方偏微溫或微涼，具備中等宣散/清解動能。適合急性期外感或輕度調節使用。</div>`;
+            scaleBox.style.backgroundColor = '#f3e5f5'; scaleBox.style.color = '#6a1b9a'; scaleBox.style.border = '1px solid #e1bee7';
+        } else {
+            scaleBox.innerHTML = `🌿 藥性極為平和<div style="font-size:12px; margin-top:4px; font-weight:normal;">動能和緩，無明顯寒熱偏性，適合一般體質長期保養與脾胃調理。</div>`;
+            scaleBox.style.backgroundColor = '#e8f5e9'; scaleBox.style.color = '#2e7d32'; scaleBox.style.border = '1px solid #c8e6c9';
+        }
     }
     scaleBox.style.display = 'block';
 
@@ -569,13 +590,7 @@ function renderNatureChart(details, totalWeight) {
     const herbLists = [details["寒"].herbs, details["涼"].herbs, details["平"].herbs, details["溫"].herbs, details["熱"].herbs];
     const labels = ["寒性", "涼性", "平性", "溫性", "熱性"];
     
-    const backgroundColors = [
-        '#1565C0', // 寒 (深藍)
-        '#64B5F6', // 涼 (淺藍)
-        '#81C784', // 平 (綠色)
-        '#FFB300', // 溫 (橘色)
-        '#C62828'  // 熱 (深紅)
-    ];
+    const backgroundColors = ['#1565C0', '#64B5F6', '#81C784', '#FFB300', '#C62828'];
 
     natureChartInstance = new Chart(ctx, {
         type: 'doughnut',
@@ -593,25 +608,15 @@ function renderNatureChart(details, totalWeight) {
             maintainAspectRatio: false,
             layout: { padding: 10 },
             plugins: {
-                legend: {
-                    position: 'right',
-                    labels: { 
-                        boxWidth: 12, 
-                        font: { size: 12, family: 'sans-serif' } 
-                    }
-                },
+                legend: { position: 'right', labels: { boxWidth: 12, font: { size: 12, family: 'sans-serif' } } },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
                             let index = context.dataIndex;
                             let parsed = context.parsed;
                             if (parsed === 0) return null; 
-                            
                             let percentage = (parsed / totalWeight * 100).toFixed(1) + '%';
-                            
-                            let lines = [];
-                            lines.push(`${context.label}: ${parsed.toFixed(2)} g (${percentage})`);
-                            
+                            let lines = [`${context.label}: ${parsed.toFixed(2)} g (${percentage})`];
                             let herbs = herbLists[index];
                             if (herbs && herbs.length > 0) {
                                 lines.push('-------------------');
@@ -689,7 +694,7 @@ function runAI_Radar(compositionArray, doseHerbsMap) {
     let topResults = results.slice(0, 10);
 
     if (topResults.length === 0) {
-        radarList.innerHTML = '<p style="color:#d32f2f;">無法推導：組合太過獨特，查無關關經典方劑。</p>';
+        radarList.innerHTML = '<p style="color:#d32f2f;">無法推導：組合太過獨特，查無關聯經典方劑。</p>';
         return;
     }
 
