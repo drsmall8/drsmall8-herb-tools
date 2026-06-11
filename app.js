@@ -518,7 +518,7 @@ function calculateResult() {
     }
 }
 
-// 🌟 雙軸評估模型：動態寒熱與烈度運算
+// 🌟 雙軸評估模型：動態寒熱與烈度運算 (修正模糊語氣版)
 function renderNatureChart(details, totalWeight) {
     const container = document.getElementById('chartContainer');
     const ctx = document.getElementById('natureChart');
@@ -541,8 +541,8 @@ function renderNatureChart(details, totalWeight) {
     // 雙軸核心權重定義
     const weights = { "熱": 4, "溫": 1, "平": 0, "涼": -1, "寒": -4 };
     
-    let thermalSum = 0;   // 第一軸：寒熱偏向加總
-    let intensitySum = 0; // 第二軸：動能烈度加總 (絕對值)
+    let thermalSum = 0;   
+    let intensitySum = 0; 
 
     ["熱", "溫", "平", "涼", "寒"].forEach(nature => {
         let w = details[nature].total;
@@ -553,6 +553,11 @@ function renderNatureChart(details, totalWeight) {
 
     let thermalScore = thermalSum / totalWeight;
     let intensityScore = intensitySum / totalWeight;
+
+    // 🌟 精準判斷微偏方向
+    let trendText = "平穩";
+    if (thermalScore > 0.1) trendText = "偏溫";
+    else if (thermalScore < -0.1) trendText = "偏涼";
 
     // 動態決策樹渲染
     if (thermalScore >= 0.8 && intensityScore >= 2.0) {
@@ -568,13 +573,18 @@ function renderNatureChart(details, totalWeight) {
         scaleBox.innerHTML = `💧 處方偏涼寒<div style="font-size:12px; margin-top:4px; font-weight:normal;">具備清熱生津之效。請留意患者脾胃是否虛寒、易腹瀉或怕冷。</div>`;
         scaleBox.style.backgroundColor = '#e3f2fd'; scaleBox.style.color = '#1565c0'; scaleBox.style.border = '1px solid #bbdefb';
     } else {
-        // 第一軸落在平衡區 (-0.5 ~ 0.5)
+        // 第一軸落在平衡區 (-0.5 ~ 0.5)，進入細部動態判斷
         if (intensityScore >= 2.0) {
-            scaleBox.innerHTML = `⚡ 寒熱並用 (強烈動能之劑)<div style="font-size:12px; margin-top:4px; font-weight:normal;">處方總體寒熱平衡，但內部含有強烈對立之大寒大熱藥材。此屬辛開苦降或攻邪治病之重劑，切勿視為保養藥長期調理。</div>`;
+            scaleBox.innerHTML = `⚡ 寒熱交作，整體略【${trendText}】<div style="font-size:12px; margin-top:4px; font-weight:normal;">內部含有強烈對立之大寒大熱藥材。此屬辛開苦降或攻邪治病之重劑，切勿視為保養藥長期調理。</div>`;
             scaleBox.style.backgroundColor = '#fff9c4'; scaleBox.style.color = '#f57f17'; scaleBox.style.border = '1px solid #fff59d';
         } else if (intensityScore >= 0.8) {
-            scaleBox.innerHTML = `💨 寒熱兼調 (具備中等動能)<div style="font-size:12px; margin-top:4px; font-weight:normal;">本處方偏微溫或微涼，具備中等宣散/清解動能。適合急性期外感或輕度調節使用。</div>`;
-            scaleBox.style.backgroundColor = '#f3e5f5'; scaleBox.style.color = '#6a1b9a'; scaleBox.style.border = '1px solid #e1bee7';
+            // 葛根湯會落在這裡，文字與顏色會依據 trendText 自動變換
+            let bgC = '#f5f5f5', fontC = '#424242', borC = '#e0e0e0';
+            if (trendText === "偏溫") { bgC = '#fff8e1'; fontC = '#f57f17'; borC = '#fff59d'; } // 偏橘黃
+            else if (trendText === "偏涼") { bgC = '#e1f5fe'; fontC = '#0277bd'; borC = '#81d4fa'; } // 偏淡藍
+            
+            scaleBox.innerHTML = `💨 寒熱兼調，整體【${trendText}】<div style="font-size:12px; margin-top:4px; font-weight:normal;">本處方具備中等宣散/清解動能。適合急性期外感或輕度調節使用。</div>`;
+            scaleBox.style.backgroundColor = bgC; scaleBox.style.color = fontC; scaleBox.style.border = `1px solid ${borC}`;
         } else {
             scaleBox.innerHTML = `🌿 藥性極為平和<div style="font-size:12px; margin-top:4px; font-weight:normal;">動能和緩，無明顯寒熱偏性，適合一般體質長期保養與脾胃調理。</div>`;
             scaleBox.style.backgroundColor = '#e8f5e9'; scaleBox.style.color = '#2e7d32'; scaleBox.style.border = '1px solid #c8e6c9';
