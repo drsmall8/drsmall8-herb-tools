@@ -1,424 +1,208 @@
 // ==========================================
-// AI 處方本質分析與教學推薦引擎 (獨立擴充模組)
-// 負責：嚴謹等效劑量推導、結構啟發(加減法)演算法
-// 注意：此模組依賴 app.js 提供的全域變數與共用函數
+// 擴充模組：AI 處方本質分析與教學推薦 (雙軌 + 動態模式升級版)
 // ==========================================
 
-function switchTab(tabName) {
-    const tabStrict = document.getElementById('tabStrict');
-    const tabStructure = document.getElementById('tabStructure');
-    const strictPlansArea = document.getElementById('strictPlansArea');
-    const structurePlansArea = document.getElementById('structurePlansArea');
+function switchTab(tabId) {
+    document.getElementById('tabStrict').classList.remove('active');
+    document.getElementById('tabStructure').classList.remove('active');
+    document.getElementById('strictPlansArea').style.display = 'none';
+    document.getElementById('structurePlansArea').style.display = 'none';
 
-    if(tabStrict) tabStrict.classList.remove('active');
-    if(tabStructure) tabStructure.classList.remove('active');
-    if(strictPlansArea) strictPlansArea.style.display = 'none';
-    if(structurePlansArea) structurePlansArea.style.display = 'none';
-
-    if(tabName === 'strict') {
-        if(tabStrict) tabStrict.classList.add('active');
-        if(strictPlansArea) strictPlansArea.style.display = 'block';
+    if (tabId === 'strict') {
+        document.getElementById('tabStrict').classList.add('active');
+        document.getElementById('strictPlansArea').style.display = 'block';
     } else {
-        if(tabStructure) tabStructure.classList.add('active');
-        if(structurePlansArea) structurePlansArea.style.display = 'block';
+        document.getElementById('tabStructure').classList.add('active');
+        document.getElementById('structurePlansArea').style.display = 'block';
     }
 }
 
 function runEducationalAnalysis() {
-    if (currentUIMode === 'learning') { 
-        alert("請先切換至「臨床換算模式」再執行處方深度優化！"); 
+    const strictArea = document.getElementById('optimizedList');
+    const structArea = document.getElementById('structuralList');
+    const resultSection = document.getElementById('analysisResultArea');
+    
+    // 🌟 讀取使用者的模式選擇 (compact 骨架精簡 / elegant 臨床優雅)
+    const analysisMode = document.getElementById('analysisModeSelect') ? document.getElementById('analysisModeSelect').value : 'compact';
+
+    if (!prescription || prescription.length === 0) {
+        alert('請先在左側加入處方！');
         return;
     }
-    if (prescription.filter(p => p.dose > 0).length === 0) {
-        alert("⚠️ 請先輸入處方劑量！"); return;
-    }
 
-    let netTargets = {};
-    let targetHerbNames = [];
-    // globalFinalHerbs 來自 app.js 的計算結果
-    for (let herb in globalFinalHerbs) {
-        if (globalFinalHerbs[herb] > 0.01) { 
-            netTargets[herb] = globalFinalHerbs[herb]; 
-            targetHerbNames.push(herb);
-        }
-    }
-    if (targetHerbNames.length === 0) return;
+    resultSection.style.display = 'block';
 
-    // 🌟 AI 模擬分析基準：預設以港香蘭為推導主軸
-    let targetSimulationBrand = "港香蘭"; 
-    const checkedCategories = Array.from(document.querySelectorAll('.category-cb:checked')).map(cb => cb.value);
+    let targetHerbs = Object.keys(globalFinalHerbs).filter(h => globalFinalHerbs[h] > 0.01);
+    let complexFormulasInPresc = prescription.filter(p => p.uniqueHerbCount > 1);
+
+    // 限制候選庫：強制去重，且僅使用港香蘭
+    let candidateDb = [];
+    let seenNames = new Set();
     
-    // database 來自 app.js
-    let validDB = database.filter(item => {
-        if (!item.brand.includes(targetSimulationBrand) || item.isWarning || item.ratio <= 0) return false;
-        if (!checkedCategories.includes(item.category)) return false; 
-        return true;
-    });
-
-    if (validDB.length === 0) {
-        const checkedBrands = Array.from(document.querySelectorAll('.brand-cb:checked')).map(cb => cb.value);
-        validDB = database.filter(item => {
-            if (!checkedBrands.includes(item.brand) || item.isWarning || item.ratio <= 0) return false;
-            if (!checkedCategories.includes(item.category)) return false; 
-            return true;
-        });
-    }
-
-    let singleHerbs = validDB.filter(d => d.uniqueHerbCount === 1);
-    let formulas = validDB.filter(d => d.uniqueHerbCount > 1);
-
-    let singleLookup = {};
-    singleHerbs.forEach(s => {
-        if(s.herbArray.length > 0 && !singleLookup[s.herbArray[0]]) {
-            singleLookup[s.herbArray[0]] = s;
-        }
-    });
-    function getSingleHerbItem(herbName) { return singleLookup[herbName]; }
-
-    generatedTeachingPlans = []; // 重置全域變數
-    
-    let allSinglesComb = [];
-    let allSinglesMissing = []; 
-    for (let herb in netTargets) {
-        let sh = getSingleHerbItem(herb);
-        if (!sh) { 
-            allSinglesMissing.push(herb);
-            continue; 
-        }
-        let coef = getHerbCoefficient(sh, herb); // 使用 app.js 的共用函數
-        if(coef > 0) allSinglesComb.push({ item: sh, dose: parseFloat((netTargets[herb] / coef).toFixed(2)) });
-    }
-    
-    let singlePlanTitle = "原形拆解 (全單方組合)";
-    if (allSinglesMissing.length > 0) {
-        singlePlanTitle = `原形拆解 (部分單方組合) <span style="color:#e67e22; font-size:11px;">⚠️ 無法補足: ${allSinglesMissing.join(',')}</span>`;
-    }
-    generatedTeachingPlans.push({ title: singlePlanTitle, isPureSingle: true, combination: allSinglesComb, score: -1 });
-
-    formulas.forEach(formula => {
-        let fHerbs = formula.herbArray; 
-        let isSubset = true;
-        for(let h of fHerbs) { if (!netTargets[h]) { isSubset = false; break; } }
-        if (!isSubset) return; 
-
-        let maxDose = Infinity;
-        fHerbs.forEach(h => {
-            let coef = getHerbCoefficient(formula, h);
-            if (coef > 0) {
-                let limit = netTargets[h] / coef;
-                if (limit < maxDose) maxDose = limit;
-            }
-        });
-        maxDose = Math.floor(maxDose * 10) / 10; 
-        if (maxDose < 1.0) return; 
-
-        let currentComb = [{ item: formula, dose: maxDose }];
-        let formulaCoverage = 0;
-        let strictMissingSingles = []; 
-
-        for (let herb in netTargets) {
-            let provided = getHerbCoefficient(formula, herb) * maxDose;
-            let remainder = netTargets[herb] - provided;
-            formulaCoverage += provided; 
-
-            if (remainder > 0.05) { 
-                let sh = getSingleHerbItem(herb);
-                if (!sh) { 
-                    strictMissingSingles.push(`${herb}(-${remainder.toFixed(1)}g)`);
-                    continue; 
-                }
-                let shCoef = getHerbCoefficient(sh, herb);
-                if (shCoef > 0) {
-                    currentComb.push({ item: sh, dose: parseFloat((remainder / shCoef).toFixed(2)) });
-                }
+    database.forEach(d => {
+        if (d.uniqueHerbCount > 1 && !d.isWarning && d.brand.includes("港香蘭")) {
+            let cleanName = getCleanDisplayName(d.name);
+            if (!seenNames.has(cleanName)) {
+                seenNames.add(cleanName);
+                candidateDb.push(d);
             }
         }
-
-        // 使用 app.js 的 getCleanDisplayName
-        let titleWithWarning = `正統方義：以【${getCleanDisplayName(formula.name)}】為主軸`;
-        if (strictMissingSingles.length > 0) {
-            titleWithWarning += ` <span style="color:#e65100; font-size:11px;">⚠️ 殘留缺口: ${strictMissingSingles.join(', ')}</span>`;
-        }
-
-        generatedTeachingPlans.push({ 
-            title: titleWithWarning, 
-            isPureSingle: false, 
-            combination: currentComb, 
-            score: formulaCoverage,
-            herbIdentity: formula.herbArray.join(',') 
-        });
     });
 
-    generatedTeachingPlans.sort((a, b) => b.score - a.score);
-    
-    let finalDisplayPlans = [];
-    let seenStrictIdentities = new Set();
-    for (let plan of generatedTeachingPlans) {
-        if (plan.isPureSingle) continue;
-        if (!seenStrictIdentities.has(plan.herbIdentity)) {
-            seenStrictIdentities.add(plan.herbIdentity);
-            finalDisplayPlans.push(plan);
-            if (finalDisplayPlans.length >= 4) break;
-        }
-    }
-
-    let pureSinglePlan = generatedTeachingPlans.find(p => p.isPureSingle);
-    if (pureSinglePlan) finalDisplayPlans.push(pureSinglePlan);
-
-    const optList = document.getElementById('optimizedList');
-    if(optList) optList.innerHTML = '';
-    
-    if (finalDisplayPlans.length === 0 || (finalDisplayPlans.length === 1 && finalDisplayPlans[0].isPureSingle && allSinglesComb.length === 0)) {
-        let unsupportHerbs = [];
-        for(let herb in netTargets) {
-            if(!getSingleHerbItem(herb)) unsupportHerbs.push(herb);
-        }
-        let failDiagnostic = `❌ 找不到能夠完全對應原藥材的等效方案。<br><br>`;
-        if (unsupportHerbs.length > 0) {
-            failDiagnostic += `💡 <strong>診斷原因：</strong>目前處方包含無單味科中支援的成分：<span style="color:#d32f2f; font-weight:bold;">${unsupportHerbs.join(', ')}</span>。導致等效劑量矩陣無法閉合。請嘗試切換至「結構啟發」面板觀看骨架建議！`;
-        } else {
-            failDiagnostic += `💡 <strong>診斷原因：</strong>勾選的廠牌與劑型限制過窄，現有庫存無法覆蓋生藥種類。`;
-        }
-        if(optList) optList.innerHTML = `<p style="color:#d32f2f; line-height:1.6; font-size:14px;">${failDiagnostic}</p>`;
+    // 雙軌制切換，並將 mode 傳遞進去
+    if (complexFormulasInPresc.length === 1 && targetHerbs.length === complexFormulasInPresc[0].uniqueHerbCount) {
+        runDeconstructionMode(complexFormulasInPresc[0], candidateDb, structArea, analysisMode);
     } else {
-        finalDisplayPlans.forEach((plan, index) => {
-            let itemsHtml = '';
-            plan.combination.forEach(c => {
-                let tag = c.item.uniqueHerbCount === 1 ? '單方' : '複方';
-                // 🆕 移除了 [廠牌] 的顯示，版面更簡潔
-                itemsHtml += `
-                    <div class="plan-item">
-                        <div class="has-hover" onclick="toggleMobileCard(this)" style="display:inline-block;">
-                            <span><strong>${c.item.name}</strong> <small>(${tag})</small></span>
-                            ${getHoverCardHTML(c.item)}
-                        </div>
-                        <span><strong>${c.dose} g</strong></span>
-                    </div>`;
-            });
-
-            // 🆕 移除了套用按鈕
-            if(optList) optList.innerHTML += `
-                <div class="plan-card">
-                    <div class="plan-header">
-                        <span class="plan-title">方案 ${index + 1}：${plan.title}</span>
-                    </div>
-                    <div>${itemsHtml}</div>
-                </div>`;
-        });
+        runCombinationMode(targetHerbs, candidateDb, structArea, analysisMode);
     }
 
-    // ==========================================
-    // 結構啟發 (加減法演算法)
-    // ==========================================
-    let structuralPlans = [];
+    strictArea.innerHTML = `<div style="padding:15px; color:#666; background:#f9f9f9; border-radius:6px;">
+        <strong>⚖️ 嚴謹等效單方展開：</strong><br>
+        如果您要完全用單方來調配此藥，請參考右側「原藥材換算結果」的精確克數直接開立單方。
+    </div>`;
     
-    let unifiedCandidates = formulas.map(f => {
-        let surplus = f.herbArray.filter(h => !targetHerbNames.includes(h));
-        let matchCount = f.herbArray.filter(h => targetHerbNames.includes(h)).length;
-        return { formula: f, surplus: surplus, matchCount: matchCount };
-    }).filter(item => item.surplus.length <= 5 && item.matchCount >= 2); 
+    switchTab('structure');
+}
 
-    unifiedCandidates.sort((a, b) => {
-        let scoreA = a.matchCount - (a.surplus.length * 1.5);
-        let scoreB = b.matchCount - (b.surplus.length * 1.5);
-        return scoreB - scoreA;
-    });
-    
-    let topCandidates = unifiedCandidates.slice(0, 60).map(item => item.formula); 
+// ==========================================
+// 軌道 B：方根拆解模式
+// ==========================================
+function runDeconstructionMode(targetFormula, candidateDb, outputArea, mode) {
+    let targetHerbs = targetFormula.herbArray;
+    let targetCleanName = getCleanDisplayName(targetFormula.name);
+    let subFormulas = [];
 
-    function hasSillySwap(minusArray, missingArray) {
-        for (let m of minusArray) {
-            let coreM = getCoreHerbName(m); // 使用 app.js 的共用函數
-            if(!coreM) continue;
-            for (let ah of missingArray) {
-                let coreAh = getCoreHerbName(ah);
-                if(!coreAh) continue;
-                if (coreM === coreAh) return true;
-            }
-        }
-        return false;
-    }
+    // 動態權重：優雅模式極度厭惡贅藥 (-50)，精簡模式容忍度較高 (-15)
+    let extraPenalty = (mode === 'elegant') ? 50 : 15;
 
-    // 單方劑骨架分析
-    topCandidates.forEach(f1 => {
-        let combinedHerbs = new Set(f1.herbArray);
-        let surplus = [...combinedHerbs].filter(h => !targetHerbNames.includes(h));
-        let missing = targetHerbNames.filter(h => !combinedHerbs.has(h));
+    candidateDb.forEach(f => {
+        let fCleanName = getCleanDisplayName(f.name);
         
-        if (hasSillySwap(surplus, missing)) return; 
+        if (fCleanName === targetCleanName) return;
+        if (f.uniqueHerbCount >= targetFormula.uniqueHerbCount) return;
+        if (f.uniqueHerbCount < 2) return;
 
-        if (surplus.length <= 5) {
-            let singlesToUse = [];
-            let missingSingles = []; 
-            for(let h of missing) {
-                let sh = getSingleHerbItem(h);
-                if(!sh) { 
-                    missingSingles.push(h); 
-                } else {
-                    singlesToUse.push(sh);
-                }
-            }
-            structuralPlans.push({
-                formulas: [f1], singles: singlesToUse, minusHerbs: surplus, missingSingles: missingSingles,
-                totalItems: 1 + surplus.length + singlesToUse.length + missingSingles.length, 
-                formulaHerbCount: combinedHerbs.size - surplus.length,
-                isSubtraction: surplus.length > 0
+        let matchCount = 0;
+        f.herbArray.forEach(h => {
+            if (targetHerbs.includes(h)) matchCount++;
+        });
+
+        if (matchCount >= f.uniqueHerbCount * 0.8 && matchCount >= 2) {
+            let missingFromTarget = targetHerbs.filter(h => !f.herbArray.includes(h)); 
+            let extraInSub = f.herbArray.filter(h => !targetHerbs.includes(h)); 
+
+            subFormulas.push({
+                formula: f,
+                matchCount: matchCount,
+                missing: missingFromTarget,
+                extra: extraInSub,
+                score: (matchCount * 10) - (extraInSub.length * extraPenalty) 
             });
         }
     });
 
-    // 雙方劑疊加分析
-    for(let i=0; i<topCandidates.length; i++) {
-        let f1 = topCandidates[i];
-        for(let j=i+1; j<topCandidates.length; j++) {
-            let f2 = topCandidates[j];
-            
-            if (getCleanDisplayName(f1.name) === getCleanDisplayName(f2.name)) continue;
+    subFormulas = subFormulas.filter(res => res.score > 0).sort((a, b) => b.score - a.score);
+    let topResults = subFormulas.slice(0, 5); 
 
-            let combinedHerbs = new Set(f1.herbArray);
-            for(let h of f2.herbArray) combinedHerbs.add(h);
-            
-            let surplus = [...combinedHerbs].filter(h => !targetHerbNames.includes(h));
-            let missing = targetHerbNames.filter(h => !combinedHerbs.has(h));
-            
-            if (hasSillySwap(surplus, missing)) continue;
+    let modeText = (mode === 'elegant') ? '✨ 臨床優雅模式 (追求純淨基礎骨架)' : '📦 骨架精簡模式 (追求最大塊基底)';
+    let html = `<div style="background:#e8f5e9; padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid #c8e6c9; color:#2e7d32;">
+        <strong>🔍 系統偵測為「單一複方」，啟動【方根拆解模式】</strong><br>
+        <span style="font-size:12px; color:#555;">當前模式：${modeText}</span><br>
+        目標：<span style="font-weight:bold; color:#1b5e20;">${targetCleanName}</span> (共 ${targetHerbs.length} 味)。以下為組成此方的演化思路：
+    </div>`;
 
-            if (surplus.length <= 5) {
-                let singlesToUse = [];
-                let missingSingles = [];
-                for(let h of missing) {
-                    let sh = getSingleHerbItem(h);
-                    if(!sh) { 
-                        missingSingles.push(h); 
-                    } else {
-                        singlesToUse.push(sh);
-                    }
-                }
-                structuralPlans.push({
-                    formulas: [f1, f2], singles: singlesToUse, minusHerbs: surplus, missingSingles: missingSingles,
-                    totalItems: 2 + surplus.length + singlesToUse.length + missingSingles.length, 
-                    formulaHerbCount: combinedHerbs.size - surplus.length,
-                    isSubtraction: surplus.length > 0
-                });
-            }
-        }
-    }
-
-    function getPlanAbsoluteSignature(plan) {
-        let fSig = plan.formulas.map(f => f.herbArray.join(',')).sort().join(' + ');
-        let mSig = plan.minusHerbs.sort().join(',');
-        let sSig = plan.singles.map(s => s.herbArray[0]).sort().join(',');
-        let msSig = plan.missingSingles.sort().join(','); 
-        return fSig + " | " + mSig + " | " + sSig + " | " + msSig;
-    }
-    
-    function getPlanFormulaConcepts(plan) {
-        return plan.formulas.map(f => f.herbArray.join(','));
-    }
-
-    let deduplicatedPlans = [];
-    let seenSignatures = new Set();
-    for(let p of structuralPlans) {
-        let sig = getPlanAbsoluteSignature(p);
-        if(!seenSignatures.has(sig)) {
-            seenSignatures.add(sig);
-            deduplicatedPlans.push(p);
-        }
-    }
-
-    const modeSelect = document.getElementById('analysisModeSelect');
-    const currentMode = modeSelect ? modeSelect.value : 'compact';
-    
-    if (currentMode === 'compact') {
-        deduplicatedPlans.sort((a, b) => {
-            if(a.totalItems !== b.totalItems) return a.totalItems - b.totalItems;
-            return b.formulaHerbCount - a.formulaHerbCount; 
-        });
+    if (topResults.length === 0) {
+        html += `<p style="color:#e74c3c; padding:10px;">目前資料庫中未找到可完美對應的基礎小方骨架。</p>`;
     } else {
-        deduplicatedPlans.sort((a, b) => {
-            let costA = (a.formulas.length > 1 ? 2 : 0) + (a.singles.length * 1.5) + (a.minusHerbs.length * 5) + (a.missingSingles.length * 10);
-            let costB = (b.formulas.length > 1 ? 2 : 0) + (b.singles.length * 1.5) + (b.minusHerbs.length * 5) + (b.missingSingles.length * 10);
-            
-            if (Math.abs(costA - costB) < 2) return b.formulaHerbCount - a.formulaHerbCount;
-            return costA - costB;
+        topResults.forEach((res, index) => {
+            let fName = getCleanDisplayName(res.formula.name);
+            let addHtml = res.missing.length > 0 ? `<div style="color:#2980b9; margin-top:5px; font-size:13px;">➕ <strong>加：</strong>${res.missing.join('、')}</div>` : '';
+            let removeHtml = res.extra.length > 0 ? `<div style="color:#c0392b; margin-top:3px; font-size:13px;">❌ <strong>去：</strong>${res.extra.join('、')}</div>` : '';
+
+            html += `
+            <div class="radar-card" style="margin-bottom:12px; padding:12px; background:#fff; border:1px solid #e0e0e0; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                <div class="radar-title" style="color:#d35400; font-weight:bold; font-size:14px; border-bottom:1px dashed #fadbd8; padding-bottom:6px; margin-bottom:6px;">
+                    💡 拆解思路 ${index + 1}：由【${fName}】擴充
+                </div>
+                <div style="font-size:14px; line-height:1.6;">
+                    <span style="background:#f0b27a; color:#fff; padding:3px 8px; border-radius:4px; font-weight:bold;">📦 ${fName}</span>
+                    ${addHtml}
+                    ${removeHtml}
+                </div>
+            </div>`;
         });
     }
+    outputArea.innerHTML = html;
+}
 
-    let finalDiversePlans = [];
-    let usedFormulaConcepts = new Set();
-    let remainingPlans = [];
+// ==========================================
+// 軌道 A：多方疊方優化模式
+// ==========================================
+function runCombinationMode(targetHerbs, candidateDb, outputArea, mode) {
+    let remainingHerbs = [...targetHerbs];
+    let chosenFormulas = [];
+    let maxIterations = 2; 
 
-    for(let p of deduplicatedPlans) {
-        let concepts = getPlanFormulaConcepts(p);
-        let isCompletelyRedundant = concepts.every(c => usedFormulaConcepts.has(c));
-        
-        if(!isCompletelyRedundant) {
-            finalDiversePlans.push(p);
-            concepts.forEach(c => usedFormulaConcepts.add(c));
-            if(finalDiversePlans.length >= 5) break;
-        } else {
-            remainingPlans.push(p); 
-        }
-    }
+    // 動態權重：優雅模式重罰贅藥 (-30)，精簡模式容忍涵蓋大方 (-10)
+    let extraPenalty = (mode === 'elegant') ? 30 : 10;
 
-    if(finalDiversePlans.length < 5) {
-        for(let p of remainingPlans) {
-            finalDiversePlans.push(p);
-            if(finalDiversePlans.length >= 5) break;
-        }
-    }
+    while (remainingHerbs.length > 0 && chosenFormulas.length < maxIterations) {
+        let bestFormula = null;
+        let bestMatchCount = 0;
+        let bestScore = -999;
 
-    const structList = document.getElementById('structuralList');
-    if(structList) structList.innerHTML = '';
-    
-    if (finalDiversePlans.length === 0) {
-        if(structList) structList.innerHTML = `<p style="color:#d32f2f;">無法生成結構啟發：查無合適的對應方劑。</p>`;
-    } else {
-        finalDiversePlans.forEach((plan, index) => {
-            let tagsHtml = '';
-            
-            plan.formulas.forEach(f => {
-                tagsHtml += `<div class="tag-formula has-hover" onclick="toggleMobileCard(this)">📦 ${getCleanDisplayName(f.name)}${getHoverCardHTML(f)}</div>`;
+        candidateDb.forEach(f => {
+            let matchCount = 0;
+            f.herbArray.forEach(h => {
+                if (remainingHerbs.includes(h)) matchCount++;
             });
             
-            if (plan.minusHerbs.length > 0) {
-                tagsHtml += `<span style="color:#ccc; line-height:28px;">-</span>`;
-                plan.minusHerbs.forEach(mh => {
-                    tagsHtml += `<div class="tag-minus">❌ 去 ${mh}</div>`;
-                });
-            }
-            
-            if (plan.singles.length > 0) {
-                tagsHtml += `<span style="color:#ccc; line-height:28px;">+</span>`;
-                plan.singles.forEach(s => {
-                    tagsHtml += `<div class="tag-single has-hover" onclick="toggleMobileCard(this)">🌿 ${getCleanDisplayName(s.name)}${getHoverCardHTML(s)}</div>`;
-                });
-            }
+            let extraCount = f.herbArray.filter(h => !targetHerbs.includes(h)).length;
+            let score = (matchCount * 10) - (extraCount * extraPenalty); 
 
-            if (plan.missingSingles && plan.missingSingles.length > 0) {
-                tagsHtml += `<span style="color:#ccc; line-height:28px;">+</span>`;
-                plan.missingSingles.forEach(ms => {
-                    tagsHtml += `<div class="tag-single" style="background:#fff3cd; color:#856404; border-color:#ffeeba; cursor:not-allowed;">⚠️ 缺 ${ms}</div>`;
-                });
+            if (score > bestScore && matchCount >= 3) { 
+                bestScore = score;
+                bestFormula = { formula: f, matchCount, extraCount, score };
             }
-            
-            let headerText = plan.isSubtraction ? 
-                `啟發思路 ${index + 1}：經典加減法 (概念步驟：${plan.totalItems})` : 
-                `啟發思路 ${index + 1}：精簡疊加骨架 (共 ${plan.totalItems} 品項)`;
-
-            if(structList) structList.innerHTML += `
-                <div class="struct-card">
-                    <div class="struct-header">${headerText}</div>
-                    <div class="struct-tags">${tagsHtml}</div>
-                </div>`;
         });
+
+        if (!bestFormula) break;
+
+        chosenFormulas.push(bestFormula.formula);
+        remainingHerbs = remainingHerbs.filter(h => !bestFormula.formula.herbArray.includes(h));
     }
 
-    let activeTabId = document.querySelector('.tab-btn.active') ? document.querySelector('.tab-btn.active').id : 'tabStrict';
-    let activeTab = activeTabId === 'tabStructure' ? 'structure' : 'strict';
-    
-    const analysisArea = document.getElementById('analysisResultArea');
-    if(analysisArea) analysisArea.style.display = 'block';
-    
-    switchTab(activeTab); 
+    let modeText = (mode === 'elegant') ? '✨ 臨床優雅模式 (精準打擊，拒絕無用雜藥)' : '📦 骨架精簡模式 (追求品項最少化)';
+    let html = `<div style="background:#e3f2fd; padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid #bbdefb; color:#1565c0;">
+        <strong>🧩 系統偵測為「疊方狀態」，啟動【疊方優化模式】</strong><br>
+        <span style="font-size:12px; color:#555;">當前模式：${modeText}</span>
+    </div>`;
+
+    if (chosenFormulas.length > 0) {
+        let fNames = chosenFormulas.map(f => `<span style="background:#5dade2; color:#fff; padding:3px 8px; border-radius:4px; margin-right:6px; font-weight:bold;">📦 ${getCleanDisplayName(f.name)}</span>`).join('');
+        let missingHtml = remainingHerbs.length > 0 ? `<div style="margin-top:8px; color:#2980b9; font-size:13px;">➕ <strong>需額外加單方：</strong>${remainingHerbs.join('、')}</div>` : `<div style="margin-top:8px; color:#27ae60; font-weight:bold;">✅ 已完美涵蓋所有目標藥味</div>`;
+        
+        let extraHerbs = [];
+        chosenFormulas.forEach(f => {
+            f.herbArray.forEach(h => {
+                if (!targetHerbs.includes(h) && !extraHerbs.includes(h)) extraHerbs.push(h);
+            });
+        });
+        let extraHtml = extraHerbs.length > 0 ? `<div style="margin-top:4px; color:#c0392b; font-size:13px;">❌ <strong>多出且需注意之藥味：</strong>${extraHerbs.join('、')}</div>` : '';
+
+        html += `
+        <div class="radar-card" style="padding:12px; background:#fff; border:1px solid #e0e0e0; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+            <div class="radar-title" style="color:#2c3e50; font-weight:bold; font-size:14px; border-bottom:1px dashed #bdc3c7; padding-bottom:6px; margin-bottom:6px;">
+                💡 精簡骨架建議方案
+            </div>
+            <div style="font-size:14px; margin-top:8px;">
+                <div style="margin-bottom:8px;">${fNames}</div>
+                ${missingHtml}
+                ${extraHtml}
+            </div>
+        </div>`;
+    } else {
+        html += `<p style="color:#e74c3c; padding:10px;">目前處方過於分散或特殊，無法推導出合適的大方骨架。</p>`;
+    }
+    outputArea.innerHTML = html;
 }
