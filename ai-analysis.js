@@ -1,5 +1,5 @@
 // ==========================================
-// 擴充模組：AI 處方本質分析與教學推薦 (雙軌 + 動態模式升級版)
+// 擴充模組：AI 處方本質分析與教學推薦 (雙軌 + 同效異方換算 + 外科手術式去結巴去重版)
 // ==========================================
 
 function switchTab(tabId) {
@@ -22,7 +22,7 @@ function runEducationalAnalysis() {
     const structArea = document.getElementById('structuralList');
     const resultSection = document.getElementById('analysisResultArea');
     
-    // 🌟 讀取使用者的模式選擇 (compact 骨架精簡 / elegant 臨床優雅)
+    // 讀取使用者的模式選擇 (compact 骨架精簡 / elegant 臨床優雅)
     const analysisMode = document.getElementById('analysisModeSelect') ? document.getElementById('analysisModeSelect').value : 'compact';
 
     if (!prescription || prescription.length === 0) {
@@ -42,8 +42,14 @@ function runEducationalAnalysis() {
     database.forEach(d => {
         if (d.uniqueHerbCount > 1 && !d.isWarning && d.brand.includes("港香蘭")) {
             let cleanName = getCleanDisplayName(d.name);
-            if (!seenNames.has(cleanName)) {
-                seenNames.add(cleanName);
+            
+            // 🆕 外科手術式「去結巴」去重金鑰
+            // 規則：如果結尾出現「湯散」、「散散」、「丸散」，只保留第一個主要方劑名
+            // 這樣「四逆湯」與「四逆散」能安然共存，而「銀翹散散」、「桔梗湯散」會被精準還原去重
+            let dedupeKey = cleanName.replace(/(湯|散|丸|膏|丹|粉)(散|湯|丸|粉)+$/, '$1'); 
+
+            if (!seenNames.has(dedupeKey)) {
+                seenNames.add(dedupeKey);
                 candidateDb.push(d);
             }
         }
@@ -56,12 +62,155 @@ function runEducationalAnalysis() {
         runCombinationMode(targetHerbs, candidateDb, structArea, analysisMode);
     }
 
-    strictArea.innerHTML = `<div style="padding:15px; color:#666; background:#f9f9f9; border-radius:6px;">
-        <strong>⚖️ 嚴謹等效單方展開：</strong><br>
-        如果您要完全用單方來調配此藥，請參考右側「原藥材換算結果」的精確克數直接開立單方。
-    </div>`;
+    // 軌道二：嚴謹劑量等效 (同效異方換算演算法)
+    runStrictEquivalenceMode(globalFinalHerbs, candidateDb, strictArea);
     
     switchTab('structure');
+}
+
+// ==========================================
+// 軌道二：嚴謹劑量等效 (複方 + 單方 完美數學替換)
+// ==========================================
+function runStrictEquivalenceMode(targetHerbsMap, candidateDb, outputArea) {
+    let targetHerbNames = Object.keys(targetHerbsMap).filter(h => targetHerbsMap[h] > 0.01);
+    let solutions = [];
+
+    // 尋找能無縫放入的單一複方基底
+    candidateDb.forEach(f => {
+        if (f.uniqueHerbCount < 2) return;
+        
+        // 嚴謹條件：候選方劑的每一味藥，都必須存在於目標處方中 (不允許出現贅藥)
+        let isStrictSubset = f.herbArray.every(h => targetHerbNames.includes(h));
+        if (!isStrictSubset) return; 
+
+        // 計算此方劑可以開幾克 (找出限量因子)
+        let maxDose = Infinity;
+        let cMap = {};
+        f.herbArray.forEach(h => {
+            let coef = getHerbCoefficient(f, h); // 此方劑 1g 含有多少生藥
+            cMap[h] = coef;
+            if (coef > 0) {
+                maxDose = Math.min(maxDose, targetHerbsMap[h] / coef);
+            }
+        });
+
+        maxDose = Math.min(maxDose, 15.0); // 限制單一複方上限
+
+        if (maxDose >= 0.5) {
+            let coveredWeight = 0;
+            let remainder = {};
+            targetHerbNames.forEach(h => remainder[h] = targetHerbsMap[h]);
+
+            f.herbArray.forEach(h => {
+                let covered = maxDose * cMap[h];
+                coveredWeight += covered;
+                remainder[h] -= covered; // 扣除生藥
+            });
+
+            solutions.push({
+                formulas: [{ name: getCleanDisplayName(f.name), dose: maxDose.toFixed(1) }],
+                coveredWeight: coveredWeight,
+                remainder: remainder
+            });
+        }
+    });
+
+    solutions.sort((a, b) => b.coveredWeight - a.coveredWeight);
+
+    // 貪婪疊加，試著在第一名的方案上再加第二個複方
+    let multiSolutions = [];
+    solutions.slice(0, 3).forEach(sol1 => {
+        let bestF2 = null, bestF2Dose = 0, bestF2Covered = 0, bestF2CMap = {};
+
+        candidateDb.forEach(f2 => {
+            let f2Name = getCleanDisplayName(f2.name);
+            if (f2Name === sol1.formulas[0].name) return;
+            if (f2.uniqueHerbCount < 2) return;
+            
+            let isSubset = f2.herbArray.every(h => targetHerbNames.includes(h));
+            if (!isSubset) return;
+
+            let maxDose2 = Infinity;
+            let cMap2 = {};
+            f2.herbArray.forEach(h => {
+                let coef = getHerbCoefficient(f2, h);
+                cMap2[h] = coef;
+                if (coef > 0) {
+                    maxDose2 = Math.min(maxDose2, sol1.remainder[h] / coef);
+                }
+            });
+
+            maxDose2 = Math.min(maxDose2, 10.0);
+
+            if (maxDose2 >= 0.5) {
+                let covered2 = 0;
+                f2.herbArray.forEach(h => { covered2 += maxDose2 * cMap2[h]; });
+
+                if (covered2 > bestF2Covered) {
+                    bestF2Covered = covered2;
+                    bestF2 = f2;
+                    bestF2Dose = maxDose2;
+                    bestF2CMap = cMap2;
+                }
+            }
+        });
+
+        if (bestF2) {
+            let newRemainder = { ...sol1.remainder };
+            bestF2.herbArray.forEach(h => { newRemainder[h] -= bestF2Dose * bestF2CMap[h]; });
+            multiSolutions.push({
+                formulas: [sol1.formulas[0], { name: getCleanDisplayName(bestF2.name), dose: bestF2Dose.toFixed(1) }],
+                coveredWeight: sol1.coveredWeight + bestF2Covered,
+                remainder: newRemainder
+            });
+        }
+    });
+
+    let allSolutions = [...multiSolutions, ...solutions].sort((a, b) => b.coveredWeight - a.coveredWeight);
+    
+    // 渲染 UI
+    let strictHtml = `<div style="padding:15px; background:#f9f9f9; border-radius:6px; border:1px solid #e0e0e0;">
+        <div style="font-weight:bold; color:#2c3e50; margin-bottom:10px; border-bottom:1px dashed #ccc; padding-bottom:6px;">⚖️ 同效異方精算方案 (複方替代 + 單方補齊)</div>
+        <p style="font-size:13px; color:#666; margin-bottom:12px;">系統為您尋找可替代的【複方基底】，並計算剩餘需開立的【單方克數】，以達到完全相同的生藥總量：</p>`;
+
+    if(allSolutions.length > 0) {
+        allSolutions.slice(0, 3).forEach((sol, idx) => {
+            let fHtml = sol.formulas.map(f => `<span style="background:#5dade2; color:#fff; padding:3px 8px; border-radius:4px; font-weight:bold; margin-right:5px;">📦 ${f.name} <span style="color:#ffeb3b;">${f.dose}g</span></span>`).join('');
+            
+            let missingHtml = Object.keys(sol.remainder)
+                .filter(h => sol.remainder[h] > 0.1)
+                .sort((a,b) => sol.remainder[b] - sol.remainder[a])
+                .map(h => `<span style="display:inline-block; margin-right:10px; font-size:13px;">🌿 ${h} <span style="color:#d35400;">${sol.remainder[h].toFixed(1)}g</span></span>`)
+                .join('');
+
+            if(missingHtml === '') missingHtml = `<span style="color:#27ae60; font-weight:bold;">✅ 已完美等效，無需單方！</span>`;
+
+            strictHtml += `
+            <div class="radar-card" style="margin-bottom:12px; padding:12px; background:#fff; border:1px solid #e0e0e0; border-radius:8px;">
+                <div style="font-size:14px; color:#34495e; font-weight:bold; margin-bottom:8px;">💡 替代方案 ${idx+1}：</div>
+                <div style="margin-bottom:8px;">${fHtml}</div>
+                <div style="padding-top:8px; border-top:1px dashed #eee;">
+                    <div style="font-size:12px; color:#7f8c8d; margin-bottom:4px;">👇 補齊差額所需單方 (原藥材量)：</div>
+                    ${missingHtml}
+                </div>
+            </div>`;
+        });
+    } else {
+        strictHtml += `<p style="color:#e74c3c;">無法找到不含贅藥的複方基底，請參考下方全單方清單。</p>`;
+    }
+
+    // 保底：全單方展開
+    let sortedHerbs = targetHerbNames.sort((a, b) => targetHerbsMap[b] - targetHerbsMap[a]);
+    let allSingleHtml = sortedHerbs.map(h => `<span style="display:inline-block; background:#fff; border:1px solid #ccc; padding:4px 8px; border-radius:4px; font-size:13px; margin:4px 4px 0 0;">${h} <span style="color:#d35400; font-weight:bold;">${targetHerbsMap[h].toFixed(1)}g</span></span>`).join('');
+    
+    strictHtml += `
+        <div style="margin-top:20px; border-top:1px solid #ddd; padding-top:15px;">
+            <div style="font-weight:bold; color:#7f8c8d; font-size:13px; margin-bottom:8px;">📌 終極保底：全單方精確克數展開</div>
+            <div>${allSingleHtml}</div>
+        </div>
+    </div>`;
+
+    outputArea.innerHTML = strictHtml;
 }
 
 // ==========================================
@@ -71,31 +220,22 @@ function runDeconstructionMode(targetFormula, candidateDb, outputArea, mode) {
     let targetHerbs = targetFormula.herbArray;
     let targetCleanName = getCleanDisplayName(targetFormula.name);
     let subFormulas = [];
-
-    // 動態權重：優雅模式極度厭惡贅藥 (-50)，精簡模式容忍度較高 (-15)
     let extraPenalty = (mode === 'elegant') ? 50 : 15;
 
     candidateDb.forEach(f => {
         let fCleanName = getCleanDisplayName(f.name);
-        
         if (fCleanName === targetCleanName) return;
         if (f.uniqueHerbCount >= targetFormula.uniqueHerbCount) return;
         if (f.uniqueHerbCount < 2) return;
 
         let matchCount = 0;
-        f.herbArray.forEach(h => {
-            if (targetHerbs.includes(h)) matchCount++;
-        });
+        f.herbArray.forEach(h => { if (targetHerbs.includes(h)) matchCount++; });
 
         if (matchCount >= f.uniqueHerbCount * 0.8 && matchCount >= 2) {
             let missingFromTarget = targetHerbs.filter(h => !f.herbArray.includes(h)); 
             let extraInSub = f.herbArray.filter(h => !targetHerbs.includes(h)); 
-
             subFormulas.push({
-                formula: f,
-                matchCount: matchCount,
-                missing: missingFromTarget,
-                extra: extraInSub,
+                formula: f, matchCount: matchCount, missing: missingFromTarget, extra: extraInSub,
                 score: (matchCount * 10) - (extraInSub.length * extraPenalty) 
             });
         }
@@ -103,8 +243,8 @@ function runDeconstructionMode(targetFormula, candidateDb, outputArea, mode) {
 
     subFormulas = subFormulas.filter(res => res.score > 0).sort((a, b) => b.score - a.score);
     let topResults = subFormulas.slice(0, 5); 
-
     let modeText = (mode === 'elegant') ? '✨ 臨床優雅模式 (追求純淨基礎骨架)' : '📦 骨架精簡模式 (追求最大塊基底)';
+    
     let html = `<div style="background:#e8f5e9; padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid #c8e6c9; color:#2e7d32;">
         <strong>🔍 系統偵測為「單一複方」，啟動【方根拆解模式】</strong><br>
         <span style="font-size:12px; color:#555;">當前模式：${modeText}</span><br>
@@ -141,33 +281,21 @@ function runDeconstructionMode(targetFormula, candidateDb, outputArea, mode) {
 function runCombinationMode(targetHerbs, candidateDb, outputArea, mode) {
     let remainingHerbs = [...targetHerbs];
     let chosenFormulas = [];
-    let maxIterations = 2; 
-
-    // 動態權重：優雅模式重罰贅藥 (-30)，精簡模式容忍涵蓋大方 (-10)
     let extraPenalty = (mode === 'elegant') ? 30 : 10;
 
-    while (remainingHerbs.length > 0 && chosenFormulas.length < maxIterations) {
-        let bestFormula = null;
-        let bestMatchCount = 0;
-        let bestScore = -999;
-
+    while (remainingHerbs.length > 0 && chosenFormulas.length < 2) {
+        let bestFormula = null, bestScore = -999;
         candidateDb.forEach(f => {
             let matchCount = 0;
-            f.herbArray.forEach(h => {
-                if (remainingHerbs.includes(h)) matchCount++;
-            });
-            
+            f.herbArray.forEach(h => { if (remainingHerbs.includes(h)) matchCount++; });
             let extraCount = f.herbArray.filter(h => !targetHerbs.includes(h)).length;
             let score = (matchCount * 10) - (extraCount * extraPenalty); 
-
             if (score > bestScore && matchCount >= 3) { 
                 bestScore = score;
                 bestFormula = { formula: f, matchCount, extraCount, score };
             }
         });
-
         if (!bestFormula) break;
-
         chosenFormulas.push(bestFormula.formula);
         remainingHerbs = remainingHerbs.filter(h => !bestFormula.formula.herbArray.includes(h));
     }
@@ -181,13 +309,8 @@ function runCombinationMode(targetHerbs, candidateDb, outputArea, mode) {
     if (chosenFormulas.length > 0) {
         let fNames = chosenFormulas.map(f => `<span style="background:#5dade2; color:#fff; padding:3px 8px; border-radius:4px; margin-right:6px; font-weight:bold;">📦 ${getCleanDisplayName(f.name)}</span>`).join('');
         let missingHtml = remainingHerbs.length > 0 ? `<div style="margin-top:8px; color:#2980b9; font-size:13px;">➕ <strong>需額外加單方：</strong>${remainingHerbs.join('、')}</div>` : `<div style="margin-top:8px; color:#27ae60; font-weight:bold;">✅ 已完美涵蓋所有目標藥味</div>`;
-        
         let extraHerbs = [];
-        chosenFormulas.forEach(f => {
-            f.herbArray.forEach(h => {
-                if (!targetHerbs.includes(h) && !extraHerbs.includes(h)) extraHerbs.push(h);
-            });
-        });
+        chosenFormulas.forEach(f => { f.herbArray.forEach(h => { if (!targetHerbs.includes(h) && !extraHerbs.includes(h)) extraHerbs.push(h); }); });
         let extraHtml = extraHerbs.length > 0 ? `<div style="margin-top:4px; color:#c0392b; font-size:13px;">❌ <strong>多出且需注意之藥味：</strong>${extraHerbs.join('、')}</div>` : '';
 
         html += `
