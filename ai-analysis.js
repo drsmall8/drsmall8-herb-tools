@@ -1,13 +1,11 @@
 // ==========================================
-// 擴充模組：AI 處方本質分析與教學推薦 (純淨金鑰去重 + 防鸚鵡學舌 + 碎方淘汰制)
+// 擴充模組：AI 處方本質分析與教學推薦 (純淨金鑰去重 + 防鸚鵡學舌 + 動態碎方警告版)
 // ==========================================
 
-// 🆕 核心工具：產生「絕對純淨」的方劑金鑰，抹除所有廠牌與劑型干擾
+// 核心工具：產生「絕對純淨」的方劑金鑰，抹除所有廠牌與劑型干擾
 function getPureFormulaKey(name) {
     let clean = getCleanDisplayName(name);
-    // 第一步：拔除廠牌、引號、括號與空格
     let pure = clean.replace(/["'”’\s]|港香蘭|莊松榮|勝昌|順天堂|\(.*\)|（.*）/g, '');
-    // 第二步：外科手術去結巴 (涵蓋現代劑型)
     return pure.replace(/(湯|散|丸|膏|丹|粉|錠|膠囊|顆粒)(散|湯|丸|膏|丹|粉|錠|膠囊|顆粒)+$/, '$1');
 }
 
@@ -53,7 +51,7 @@ function runEducationalAnalysis() {
 
             if (!seenNames.has(dedupeKey)) {
                 seenNames.add(dedupeKey);
-                d.dedupeKey = dedupeKey; // 綁定純淨金鑰供後續比對
+                d.dedupeKey = dedupeKey; 
                 candidateDb.push(d);
             }
         }
@@ -65,22 +63,18 @@ function runEducationalAnalysis() {
         runCombinationMode(targetHerbs, candidateDb, structArea, analysisMode);
     }
 
-    // 軌道二：嚴謹劑量等效 (傳入原處方複方，用於防鸚鵡學舌)
     runStrictEquivalenceMode(globalFinalHerbs, candidateDb, strictArea, complexFormulasInPresc);
     
     switchTab('structure');
 }
 
 // ==========================================
-// 軌道二：嚴謹劑量等效 (臨床極限值 + 智慧去重)
+// 軌道二：嚴謹劑量等效 (動態碎方警告機制)
 // ==========================================
 function runStrictEquivalenceMode(targetHerbsMap, candidateDb, outputArea, originalComplexFormulas) {
     let targetHerbNames = Object.keys(targetHerbsMap).filter(h => targetHerbsMap[h] > 0.01);
     let allSolutions = [];
     let seenCombinationHashes = new Set(); 
-    
-    // 🆕 實戰極限值：最多容忍補齊幾味單方
-    const MAX_MISSING_HERBS = 6;
 
     // 取得原處方的純淨指紋 (防鸚鵡學舌)
     let originalHash = originalComplexFormulas.map(p => getPureFormulaKey(p.name)).sort().join('+');
@@ -222,13 +216,9 @@ function runStrictEquivalenceMode(targetHerbsMap, candidateDb, outputArea, origi
 
     let uniqueSolutions = [];
     allSolutions.sort((a, b) => b.coveredWeight - a.coveredWeight).forEach(sol => {
-        // 🆕 結算缺少單方數量
-        let missingCount = Object.keys(sol.remainder).filter(h => sol.remainder[h] > 0.1).length;
-        // 計算該方案的純淨指紋
         let hash = sol.formulas.map(f => f.dedupeKey).sort().join('+');
-
-        // 過濾條件：非鸚鵡學舌、不重複、且缺少單方在極限值內
-        if (hash !== originalHash && !seenCombinationHashes.has(hash) && missingCount <= MAX_MISSING_HERBS) {
+        // 移除硬性淘汰規則，只過濾鸚鵡學舌與重複方案
+        if (hash !== originalHash && !seenCombinationHashes.has(hash)) {
             seenCombinationHashes.add(hash);
             uniqueSolutions.push(sol);
         }
@@ -241,10 +231,12 @@ function runStrictEquivalenceMode(targetHerbsMap, candidateDb, outputArea, origi
 
     if(uniqueSolutions.length > 0) {
         uniqueSolutions.slice(0, 3).forEach((sol, idx) => {
+            let missingHerbsArray = Object.keys(sol.remainder).filter(h => sol.remainder[h] > 0.1);
+            let missingCount = missingHerbsArray.length;
+
             let fHtml = sol.formulas.map(f => `<span style="background:#5dade2; color:#fff; padding:3px 8px; border-radius:4px; font-weight:bold; margin-right:5px; display:inline-block; margin-bottom:4px;">📦 ${f.name} <span style="color:#ffeb3b;">${f.dose}g</span></span>`).join('');
             
-            let missingHtml = Object.keys(sol.remainder)
-                .filter(h => sol.remainder[h] > 0.1)
+            let missingHtml = missingHerbsArray
                 .sort((a,b) => sol.remainder[b] - sol.remainder[a])
                 .map(h => `<span style="display:inline-block; margin-right:10px; font-size:13px;">🌿 ${h} <span style="color:#d35400;">${sol.remainder[h].toFixed(1)}g</span></span>`)
                 .join('');
@@ -252,6 +244,11 @@ function runStrictEquivalenceMode(targetHerbsMap, candidateDb, outputArea, origi
             let extraHtml = sol.totalExtraHerbs.length > 0 
                 ? `<div style="font-size:12px; color:#c0392b; margin-top:6px;">⚠️ <strong>此方案多出：</strong>${sol.totalExtraHerbs.join('、')}</div>` 
                 : '';
+
+            // 🆕 動態警告：超過 6 味亮紅燈
+            let warningHtml = missingCount > 6 
+                ? `<div style="font-size:12px; color:#e74c3c; font-weight:bold; margin-bottom:4px;">🚨 注意：此方案需補齊單方較多 (${missingCount} 味)，請斟酌調劑與吞服便利性。</div>`
+                : `<div style="font-size:12px; color:#7f8c8d; margin-bottom:4px;">💡 <strong>缺少之藥味</strong> (可自行評估是否加單方)：</div>`;
 
             if(missingHtml === '') missingHtml = `<span style="color:#27ae60; font-weight:bold;">✅ 已完美等效！</span>`;
 
@@ -261,13 +258,13 @@ function runStrictEquivalenceMode(targetHerbsMap, candidateDb, outputArea, origi
                 <div style="margin-bottom:4px;">${fHtml}</div>
                 ${extraHtml}
                 <div style="padding-top:8px; margin-top:6px; border-top:1px dashed #eee;">
-                    <div style="font-size:12px; color:#7f8c8d; margin-bottom:4px;">💡 <strong>缺少之藥味</strong> (可自行評估是否加單方)：</div>
+                    ${missingCount > 0 ? warningHtml : ''}
                     ${missingHtml}
                 </div>
             </div>`;
         });
     } else {
-        strictHtml += `<p style="color:#e74c3c;">在容忍條件內 (補單方 ≤ 6 味) 無法找到不重複的複方替代骨架，請參考下方全單方清單。</p>`;
+        strictHtml += `<p style="color:#e74c3c;">無法找到不重複的複方替代骨架，請參考下方全單方清單。</p>`;
     }
 
     let sortedHerbs = targetHerbNames.sort((a, b) => targetHerbsMap[b] - targetHerbsMap[a]);
