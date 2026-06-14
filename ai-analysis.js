@@ -1,6 +1,15 @@
 // ==========================================
-// 擴充模組：AI 處方本質分析與教學推薦 (臨床微誤差容忍 + 組合去重終極版)
+// 擴充模組：AI 處方本質分析與教學推薦 (純淨金鑰去重 + 防鸚鵡學舌 + 碎方淘汰制)
 // ==========================================
+
+// 🆕 核心工具：產生「絕對純淨」的方劑金鑰，抹除所有廠牌與劑型干擾
+function getPureFormulaKey(name) {
+    let clean = getCleanDisplayName(name);
+    // 第一步：拔除廠牌、引號、括號與空格
+    let pure = clean.replace(/["'”’\s]|港香蘭|莊松榮|勝昌|順天堂|\(.*\)|（.*）/g, '');
+    // 第二步：外科手術去結巴 (涵蓋現代劑型)
+    return pure.replace(/(湯|散|丸|膏|丹|粉|錠|膠囊|顆粒)(散|湯|丸|膏|丹|粉|錠|膠囊|顆粒)+$/, '$1');
+}
 
 function switchTab(tabId) {
     document.getElementById('tabStrict').classList.remove('active');
@@ -40,13 +49,11 @@ function runEducationalAnalysis() {
     
     database.forEach(d => {
         if (d.uniqueHerbCount > 1 && !d.isWarning && d.brand.includes("港香蘭")) {
-            let cleanName = getCleanDisplayName(d.name);
-            
-            // 🆕 升級版去結巴：涵蓋錠、膠囊、顆粒
-            let dedupeKey = cleanName.replace(/(湯|散|丸|膏|丹|粉|錠|膠囊|顆粒)(散|湯|丸|膏|丹|粉|錠|膠囊|顆粒)+$/, '$1'); 
+            let dedupeKey = getPureFormulaKey(d.name);
 
             if (!seenNames.has(dedupeKey)) {
                 seenNames.add(dedupeKey);
+                d.dedupeKey = dedupeKey; // 綁定純淨金鑰供後續比對
                 candidateDb.push(d);
             }
         }
@@ -58,19 +65,25 @@ function runEducationalAnalysis() {
         runCombinationMode(targetHerbs, candidateDb, structArea, analysisMode);
     }
 
-    // 軌道二：嚴謹劑量等效 (微誤差容忍 + 疊方優化)
-    runStrictEquivalenceMode(globalFinalHerbs, candidateDb, strictArea);
+    // 軌道二：嚴謹劑量等效 (傳入原處方複方，用於防鸚鵡學舌)
+    runStrictEquivalenceMode(globalFinalHerbs, candidateDb, strictArea, complexFormulasInPresc);
     
     switchTab('structure');
 }
 
 // ==========================================
-// 軌道二：嚴謹劑量等效 (容忍微誤差與指紋去重)
+// 軌道二：嚴謹劑量等效 (臨床極限值 + 智慧去重)
 // ==========================================
-function runStrictEquivalenceMode(targetHerbsMap, candidateDb, outputArea) {
+function runStrictEquivalenceMode(targetHerbsMap, candidateDb, outputArea, originalComplexFormulas) {
     let targetHerbNames = Object.keys(targetHerbsMap).filter(h => targetHerbsMap[h] > 0.01);
     let allSolutions = [];
-    let seenCombinationHashes = new Set(); // 用於消滅 AB = BA 的重複
+    let seenCombinationHashes = new Set(); 
+    
+    // 🆕 實戰極限值：最多容忍補齊幾味單方
+    const MAX_MISSING_HERBS = 6;
+
+    // 取得原處方的純淨指紋 (防鸚鵡學舌)
+    let originalHash = originalComplexFormulas.map(p => getPureFormulaKey(p.name)).sort().join('+');
 
     // 尋找第一層基底複方
     let level1Solutions = [];
@@ -78,7 +91,7 @@ function runStrictEquivalenceMode(targetHerbsMap, candidateDb, outputArea) {
         if (f.uniqueHerbCount < 2) return;
         
         let extraHerbs = f.herbArray.filter(h => !targetHerbNames.includes(h));
-        // 🆕 微誤差容忍：允許替代方包含最多 2 味原處方沒有的藥
+        // 微誤差容忍：允許替代方最多多出 2 味贅藥
         if (extraHerbs.length > 2) return; 
 
         let maxDose = Infinity;
@@ -107,7 +120,7 @@ function runStrictEquivalenceMode(targetHerbsMap, candidateDb, outputArea) {
             });
 
             level1Solutions.push({
-                formulas: [{ name: getCleanDisplayName(f.name), dose: maxDose.toFixed(1), extra: extraHerbs }],
+                formulas: [{ name: getCleanDisplayName(f.name), dose: maxDose.toFixed(1), extra: extraHerbs, dedupeKey: f.dedupeKey }],
                 coveredWeight: coveredWeight,
                 remainder: remainder,
                 totalExtraHerbs: [...extraHerbs]
@@ -117,17 +130,15 @@ function runStrictEquivalenceMode(targetHerbsMap, candidateDb, outputArea) {
 
     level1Solutions.sort((a, b) => b.coveredWeight - a.coveredWeight);
 
-    // 疊加第二層與第三層 (拯救逍遙散)
+    // 疊加第二層與第三層
     level1Solutions.slice(0, 10).forEach(sol1 => {
         let bestF2 = null, bestF2Dose = 0, bestF2Covered = 0, bestF2CMap = {}, bestF2Extra = [];
 
         candidateDb.forEach(f2 => {
-            let f2Name = getCleanDisplayName(f2.name);
-            if (f2Name === sol1.formulas[0].name) return;
+            if (f2.dedupeKey === sol1.formulas[0].dedupeKey) return;
             if (f2.uniqueHerbCount < 2) return;
             
             let extraHerbs2 = f2.herbArray.filter(h => !targetHerbNames.includes(h));
-            // 總贅藥數不得超過 2 味
             let combinedExtra = [...new Set([...sol1.totalExtraHerbs, ...extraHerbs2])];
             if (combinedExtra.length > 2) return;
 
@@ -148,11 +159,7 @@ function runStrictEquivalenceMode(targetHerbsMap, candidateDb, outputArea) {
                 f2.herbArray.forEach(h => { if(cMap2[h] && sol1.remainder[h]) covered2 += maxDose2 * cMap2[h]; });
 
                 if (covered2 > bestF2Covered) {
-                    bestF2Covered = covered2;
-                    bestF2 = f2;
-                    bestF2Dose = maxDose2;
-                    bestF2CMap = cMap2;
-                    bestF2Extra = extraHerbs2;
+                    bestF2Covered = covered2; bestF2 = f2; bestF2Dose = maxDose2; bestF2CMap = cMap2; bestF2Extra = extraHerbs2;
                 }
             }
         });
@@ -162,17 +169,16 @@ function runStrictEquivalenceMode(targetHerbsMap, candidateDb, outputArea) {
             bestF2.herbArray.forEach(h => { if(bestF2CMap[h] && newRemainder2[h]) newRemainder2[h] -= bestF2Dose * bestF2CMap[h]; });
             
             let sol2 = {
-                formulas: [...sol1.formulas, { name: getCleanDisplayName(bestF2.name), dose: bestF2Dose.toFixed(1), extra: bestF2Extra }],
+                formulas: [...sol1.formulas, { name: getCleanDisplayName(bestF2.name), dose: bestF2Dose.toFixed(1), extra: bestF2Extra, dedupeKey: bestF2.dedupeKey }],
                 coveredWeight: sol1.coveredWeight + bestF2Covered,
                 remainder: newRemainder2,
                 totalExtraHerbs: [...new Set([...sol1.totalExtraHerbs, ...bestF2Extra])]
             };
             
-            // 嘗試疊加第三層 (最高支援3方疊加)
+            // 嘗試疊加第三層
             let bestF3 = null, bestF3Dose = 0, bestF3Covered = 0, bestF3CMap = {}, bestF3Extra = [];
             candidateDb.forEach(f3 => {
-                let f3Name = getCleanDisplayName(f3.name);
-                if (sol2.formulas.some(sf => sf.name === f3Name)) return;
+                if (sol2.formulas.some(sf => sf.dedupeKey === f3.dedupeKey)) return;
                 if (f3.uniqueHerbCount < 2) return;
                 
                 let extraHerbs3 = f3.herbArray.filter(h => !targetHerbNames.includes(h));
@@ -203,7 +209,7 @@ function runStrictEquivalenceMode(targetHerbsMap, candidateDb, outputArea) {
                 let newRemainder3 = { ...sol2.remainder };
                 bestF3.herbArray.forEach(h => { if(bestF3CMap[h] && newRemainder3[h]) newRemainder3[h] -= bestF3Dose * bestF3CMap[h]; });
                 allSolutions.push({
-                    formulas: [...sol2.formulas, { name: getCleanDisplayName(bestF3.name), dose: bestF3Dose.toFixed(1), extra: bestF3Extra }],
+                    formulas: [...sol2.formulas, { name: getCleanDisplayName(bestF3.name), dose: bestF3Dose.toFixed(1), extra: bestF3Extra, dedupeKey: bestF3.dedupeKey }],
                     coveredWeight: sol2.coveredWeight + bestF3Covered,
                     remainder: newRemainder3,
                     totalExtraHerbs: [...new Set([...sol2.totalExtraHerbs, ...bestF3Extra])]
@@ -214,11 +220,15 @@ function runStrictEquivalenceMode(targetHerbsMap, candidateDb, outputArea) {
         allSolutions.push(sol1);
     });
 
-    // 🆕 指紋去重機制 (過濾 AB = BA 的鏡像方案)
     let uniqueSolutions = [];
     allSolutions.sort((a, b) => b.coveredWeight - a.coveredWeight).forEach(sol => {
-        let hash = sol.formulas.map(f => f.name).sort().join('+');
-        if (!seenCombinationHashes.has(hash)) {
+        // 🆕 結算缺少單方數量
+        let missingCount = Object.keys(sol.remainder).filter(h => sol.remainder[h] > 0.1).length;
+        // 計算該方案的純淨指紋
+        let hash = sol.formulas.map(f => f.dedupeKey).sort().join('+');
+
+        // 過濾條件：非鸚鵡學舌、不重複、且缺少單方在極限值內
+        if (hash !== originalHash && !seenCombinationHashes.has(hash) && missingCount <= MAX_MISSING_HERBS) {
             seenCombinationHashes.add(hash);
             uniqueSolutions.push(sol);
         }
@@ -257,7 +267,7 @@ function runStrictEquivalenceMode(targetHerbsMap, candidateDb, outputArea) {
             </div>`;
         });
     } else {
-        strictHtml += `<p style="color:#e74c3c;">無法找到合適的複方基底，請參考下方全單方清單。</p>`;
+        strictHtml += `<p style="color:#e74c3c;">在容忍條件內 (補單方 ≤ 6 味) 無法找到不重複的複方替代骨架，請參考下方全單方清單。</p>`;
     }
 
     let sortedHerbs = targetHerbNames.sort((a, b) => targetHerbsMap[b] - targetHerbsMap[a]);
@@ -283,8 +293,7 @@ function runDeconstructionMode(targetFormula, candidateDb, outputArea, mode) {
     let extraPenalty = (mode === 'elegant') ? 50 : 15;
 
     candidateDb.forEach(f => {
-        let fCleanName = getCleanDisplayName(f.name);
-        if (fCleanName === targetCleanName) return;
+        if (f.dedupeKey === targetFormula.dedupeKey) return;
         if (f.uniqueHerbCount >= targetFormula.uniqueHerbCount) return;
         if (f.uniqueHerbCount < 2) return;
 
